@@ -30,7 +30,12 @@ migrate_working_dir/
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
-/build/
+# /build/ — build/web is committed so Vercel can deploy it as static files
+/build/android/
+/build/ios/
+/build/linux/
+/build/macos/
+/build/windows/
 /coverage/
 
 # Symbolication related
