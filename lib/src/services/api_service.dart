@@ -57,7 +57,13 @@ class ApiService {
   }
 
   static Map<String, dynamic> _handleResponse(http.Response response) {
-    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    Map<String, dynamic>? body;
+    try {
+      body = jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (_) {
+      // Server returned non-JSON (HTML error page, timeout, etc.)
+      throw ApiException('Server error (${response.statusCode})', response.statusCode);
+    }
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return body;
     }
