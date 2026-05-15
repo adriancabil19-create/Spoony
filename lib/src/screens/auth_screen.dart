@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
@@ -38,6 +39,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkInitialState());
+
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (!mounted) return;
       if (data.event == AuthChangeEvent.passwordRecovery) {
@@ -157,6 +160,32 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  // Fallback: supabase_flutter processes the ?code= during initialize() (before
+  // AuthScreen builds), so the passwordRecovery event fires into an empty stream
+  // and is lost. We detect it here by decoding the JWT's amr claim.
+  void _checkInitialState() {
+    if (_isPasswordRecovery) return;
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session == null) return;
+    if (!Uri.base.queryParameters.containsKey('code')) return;
+    try {
+      final parts = session.accessToken.split('.');
+      if (parts.length < 2) return;
+      final normalized = base64Url.normalize(parts[1]);
+      final payload = jsonDecode(utf8.decode(base64Url.decode(normalized)))
+          as Map<String, dynamic>;
+      final amr = payload['amr'] as List?;
+      final isRecovery =
+          amr?.any((m) => m is Map && m['method'] == 'recovery') ?? false;
+      if (isRecovery && mounted) {
+        setState(() {
+          _isPasswordRecovery = true;
+          _errorMessage = null;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _handleResetPassword() async {
