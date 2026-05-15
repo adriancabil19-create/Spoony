@@ -3,10 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ApiService {
-  static const String _baseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://localhost:3000/api',
-  );
+  static const String _baseUrl = 'https://spoony.onrender.com/api';
 
   static bool get isAuthenticated =>
       Supabase.instance.client.auth.currentSession != null;

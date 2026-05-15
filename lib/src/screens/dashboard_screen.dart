@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'home_screen.dart';
 import 'auth_screen.dart';
 
@@ -20,46 +22,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     (Icons.settings, 'Account Settings'),
   ];
 
+  String _displayName(User user) {
+    return user.userMetadata?['name'] as String? ??
+        user.userMetadata?['full_name'] as String? ??
+        user.email ??
+        'User';
+  }
+
+  String _initials(User user) {
+    final parts = _displayName(user).trim().split(' ');
+    return parts.map((p) => p.isNotEmpty ? p[0].toUpperCase() : '').take(2).join();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
+    final name = user != null ? _displayName(user) : 'User';
+    final initials = user != null ? _initials(user) : 'U';
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Top nav
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pushReplacementNamed(context, HomeScreen.routeName),
-                    child: const Row(children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Color(0xFF00BCD4),
-                        child: Icon(Icons.public, color: Colors.white, size: 18),
-                      ),
-                      SizedBox(width: 8),
-                      Text('Spoony Travel',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF006994))),
-                    ]),
-                  ),
-                  FilledButton.icon(
-                    onPressed: () => Navigator.pushReplacementNamed(context, AuthScreen.routeName),
-                    icon: const Icon(Icons.logout, size: 16),
-                    label: const Text('Sign Out'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFFFF6B4A),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            SpoonyNavBar(current: 'dashboard'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
               child: Row(
@@ -77,18 +63,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       child: Column(
                         children: [
-                          const CircleAvatar(
+                          CircleAvatar(
                             radius: 48,
-                            backgroundColor: Color(0xFFE0F7FA),
-                            child: Text('JD',
-                                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF006994))),
+                            backgroundColor: const Color(0xFFE0F7FA),
+                            child: Text(initials,
+                                style: const TextStyle(
+                                    fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF006994))),
                           ),
                           const SizedBox(height: 16),
-                          const Text('Juan Dela Cruz',
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                          Text(name,
+                              style: const TextStyle(
+                                  fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
                           const SizedBox(height: 4),
-                          const Text('Premium Member',
-                              style: TextStyle(fontSize: 12, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
+                          const Text('Member',
+                              style: TextStyle(
+                                  fontSize: 12, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
                           const SizedBox(height: 24),
                           ...List.generate(_tabs.length, (i) {
                             final (icon, label) = _tabs[i];
@@ -106,7 +95,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton.icon(
-                              onPressed: () => Navigator.pushReplacementNamed(context, AuthScreen.routeName),
+                              onPressed: () async {
+                                await Supabase.instance.client.auth.signOut();
+                                if (context.mounted) {
+                                  Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                                }
+                              },
                               icon: const Icon(Icons.logout, size: 18),
                               label: const Text('Sign Out'),
                               style: OutlinedButton.styleFrom(
@@ -122,20 +116,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                   const SizedBox(width: 32),
-                  // Main content — switches based on selected tab
-                  Expanded(child: _buildContent()),
+                  Expanded(child: _buildContent(user)),
                 ],
               ),
             ),
             const SizedBox(height: 48),
-            _Footer(),
+            const SpoonyFooter(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildContent(User? user) {
     switch (_selectedTab) {
       case 0:
         return _UpcomingTripsTab();
@@ -144,16 +137,51 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 2:
         return _SavedSpotsTab();
       case 3:
-        return _AccountSettingsTab();
+        return _AccountSettingsTab(user: user);
       default:
         return _UpcomingTripsTab();
     }
   }
 }
 
-// ── Tab content widgets ──────────────────────────────────────────────────────
+// ── Tab: Upcoming Trips ───────────────────────────────────────────────────────
 
-class _UpcomingTripsTab extends StatelessWidget {
+class _UpcomingTripsTab extends StatefulWidget {
+  @override
+  State<_UpcomingTripsTab> createState() => _UpcomingTripsTabState();
+}
+
+class _UpcomingTripsTabState extends State<_UpcomingTripsTab> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _bookings = [];
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final result = await ApiService.getMyBookings();
+      final all = (result['bookings'] as List).cast<Map<String, dynamic>>();
+      final now = DateTime.now();
+      setState(() {
+        _bookings = all.where((b) {
+          final end = DateTime.tryParse(b['end_date'] as String? ?? '');
+          return end != null && end.isAfter(now) && b['status'] != 'cancelled';
+        }).toList();
+        _loading = false;
+      });
+    } catch (_) {
+      setState(() {
+        _error = 'Could not load bookings. Make sure you are connected.';
+        _loading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -165,23 +193,60 @@ class _UpcomingTripsTab extends StatelessWidget {
         const Text('Get ready for your next adventure.',
             style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
         const SizedBox(height: 28),
-        _TripCard(
-          status: 'CONFIRMED',
-          statusColor: Color(0xFF50C878),
-          ref: 'CEB-58X9Z',
-          amount: '₱7,500',
-          paymentLabel: 'Fully Paid via GCash',
-          title: 'South Cebu Explorer',
-          dates: 'Oct 12 - Oct 14, 2026',
-          guests: '2 Adults',
-          destinations: 'Oslob, Kawasan, Moalboal',
-        ),
+        if (_loading)
+          const Center(child: CircularProgressIndicator())
+        else if (_error != null)
+          _EmptyState(message: _error!)
+        else if (_bookings.isEmpty)
+          const _EmptyState(message: 'No upcoming trips. Book one now!')
+        else
+          for (final b in _bookings) ...[
+            _TripCard.fromBooking(b),
+            const SizedBox(height: 20),
+          ],
       ],
     );
   }
 }
 
-class _BookingHistoryTab extends StatelessWidget {
+// ── Tab: Booking History ──────────────────────────────────────────────────────
+
+class _BookingHistoryTab extends StatefulWidget {
+  @override
+  State<_BookingHistoryTab> createState() => _BookingHistoryTabState();
+}
+
+class _BookingHistoryTabState extends State<_BookingHistoryTab> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _bookings = [];
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final result = await ApiService.getMyBookings();
+      final all = (result['bookings'] as List).cast<Map<String, dynamic>>();
+      final now = DateTime.now();
+      setState(() {
+        _bookings = all.where((b) {
+          final end = DateTime.tryParse(b['end_date'] as String? ?? '');
+          return end == null || end.isBefore(now) || b['status'] == 'cancelled';
+        }).toList();
+        _loading = false;
+      });
+    } catch (_) {
+      setState(() {
+        _error = 'Could not load booking history.';
+        _loading = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -193,33 +258,23 @@ class _BookingHistoryTab extends StatelessWidget {
         const Text('All your past trips and reservations.',
             style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
         const SizedBox(height: 28),
-        _TripCard(
-          status: 'COMPLETED',
-          statusColor: Color(0xFF006994),
-          ref: 'CEB-21A4B',
-          amount: '₱4,200',
-          paymentLabel: 'Paid via Maya',
-          title: 'Cebu City Cultural Tour',
-          dates: 'Mar 5 - Mar 6, 2026',
-          guests: '3 Adults',
-          destinations: 'Sirao Garden, Temple of Leah, Taoist Temple',
-        ),
-        const SizedBox(height: 20),
-        _TripCard(
-          status: 'CANCELLED',
-          statusColor: Color(0xFFFF6B4A),
-          ref: 'CEB-09Z3X',
-          amount: '₱3,800',
-          paymentLabel: 'Refunded',
-          title: 'North Cebu Island Hop',
-          dates: 'Jan 18 - Jan 20, 2026',
-          guests: '2 Adults',
-          destinations: 'Malapascua, Kalanggaman',
-        ),
+        if (_loading)
+          const Center(child: CircularProgressIndicator())
+        else if (_error != null)
+          _EmptyState(message: _error!)
+        else if (_bookings.isEmpty)
+          const _EmptyState(message: 'No booking history yet.')
+        else
+          for (final b in _bookings) ...[
+            _TripCard.fromBooking(b),
+            const SizedBox(height: 20),
+          ],
       ],
     );
   }
 }
+
+// ── Tab: Saved Spots ──────────────────────────────────────────────────────────
 
 class _SavedSpotsTab extends StatelessWidget {
   @override
@@ -230,7 +285,7 @@ class _SavedSpotsTab extends StatelessWidget {
         const Text('Saved Spots',
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
         const SizedBox(height: 4),
-        const Text('Destinations you\'ve bookmarked.',
+        const Text("Destinations you've bookmarked.",
             style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
         const SizedBox(height: 28),
         ...['Kawasan Falls', 'Malapascua Island', 'Chocolate Hills', 'Oslob Whale Shark']
@@ -240,9 +295,19 @@ class _SavedSpotsTab extends StatelessWidget {
   }
 }
 
+// ── Tab: Account Settings ─────────────────────────────────────────────────────
+
 class _AccountSettingsTab extends StatelessWidget {
+  final User? user;
+  const _AccountSettingsTab({required this.user});
+
   @override
   Widget build(BuildContext context) {
+    final name = user?.userMetadata?['name'] as String? ??
+        user?.userMetadata?['full_name'] as String? ??
+        'Not set';
+    final email = user?.email ?? 'Not set';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -254,11 +319,9 @@ class _AccountSettingsTab extends StatelessWidget {
         const SizedBox(height: 28),
         _SettingsCard(
           child: Column(children: [
-            _SettingsField(label: 'Full Name', value: 'Juan Dela Cruz'),
+            _SettingsField(label: 'Full Name', value: name),
             const Divider(),
-            _SettingsField(label: 'Email', value: 'juan@email.com'),
-            const Divider(),
-            _SettingsField(label: 'Phone', value: '+63 912 345 6789'),
+            _SettingsField(label: 'Email', value: email),
             const Divider(),
             _SettingsField(label: 'Password', value: '••••••••'),
           ]),
@@ -278,7 +341,7 @@ class _AccountSettingsTab extends StatelessWidget {
   }
 }
 
-// ── Reusable sub-widgets ─────────────────────────────────────────────────────
+// ── Trip Card ─────────────────────────────────────────────────────────────────
 
 class _TripCard extends StatelessWidget {
   final String status;
@@ -289,7 +352,7 @@ class _TripCard extends StatelessWidget {
   final String title;
   final String dates;
   final String guests;
-  final String destinations;
+  final String details;
 
   const _TripCard({
     required this.status,
@@ -300,8 +363,56 @@ class _TripCard extends StatelessWidget {
     required this.title,
     required this.dates,
     required this.guests,
-    required this.destinations,
+    required this.details,
   });
+
+  factory _TripCard.fromBooking(Map<String, dynamic> b) {
+    final statusStr = (b['status'] as String? ?? 'pending').toLowerCase();
+    final Color color;
+    switch (statusStr) {
+      case 'confirmed':
+        color = const Color(0xFF50C878);
+        break;
+      case 'cancelled':
+        color = const Color(0xFFFF6B4A);
+        break;
+      default:
+        color = const Color(0xFFFFC107);
+    }
+
+    final start = _fmtDate(b['start_date'] as String?);
+    final end = _fmtDate(b['end_date'] as String?);
+    final dates = (start.isNotEmpty && end.isNotEmpty) ? '$start - $end' : start;
+
+    final amount = b['total_amount'] != null
+        ? '₱${(b['total_amount'] as num).toStringAsFixed(0)}'
+        : '—';
+
+    final guestCount = b['guest_count'] as int? ?? 1;
+    final accommodation = b['accommodation_type'] as String? ?? '';
+    final transport = b['transport_type'] as String? ?? '';
+    final details = [accommodation, transport].where((s) => s.isNotEmpty).join(' · ');
+
+    return _TripCard(
+      status: statusStr.toUpperCase(),
+      statusColor: color,
+      ref: b['reference_code'] as String? ?? '—',
+      amount: amount,
+      paymentLabel: 'Total',
+      title: 'Cebu Tour Package',
+      dates: dates,
+      guests: '$guestCount Adult${guestCount != 1 ? 's' : ''}',
+      details: details.isNotEmpty ? details : 'Cebu, Philippines',
+    );
+  }
+
+  static String _fmtDate(String? iso) {
+    if (iso == null) return '';
+    final d = DateTime.tryParse(iso);
+    if (d == null) return '';
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${months[d.month - 1]} ${d.day}, ${d.year}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -340,7 +451,7 @@ class _TripCard extends StatelessWidget {
           Row(children: [
             _TripDetail(icon: Icons.calendar_today, label: 'Dates', value: dates),
             _TripDetail(icon: Icons.people, label: 'Guests', value: guests),
-            _TripDetail(icon: Icons.location_on, label: 'Destinations', value: destinations),
+            _TripDetail(icon: Icons.location_on, label: 'Details', value: details),
           ]),
           const SizedBox(height: 20),
           Row(children: [
@@ -372,6 +483,29 @@ class _TripCard extends StatelessWidget {
             ),
           ]),
         ],
+      ),
+    );
+  }
+}
+
+// ── Reusable sub-widgets ──────────────────────────────────────────────────────
+
+class _EmptyState extends StatelessWidget {
+  final String message;
+  const _EmptyState({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE8EDEF)),
+      ),
+      child: Center(
+        child: Text(message,
+            style: const TextStyle(fontSize: 15, color: Color(0xFF8B99A6))),
       ),
     );
   }
@@ -477,7 +611,8 @@ class _SettingsField extends StatelessWidget {
               style: const TextStyle(fontSize: 13, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
         ),
         Expanded(
-          child: Text(value, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF00314F))),
+          child: Text(value,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF00314F))),
         ),
         TextButton(onPressed: () {}, child: const Text('Edit')),
       ]),
@@ -558,65 +693,5 @@ class _MenuItem extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-class _Footer extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(children: [
-      Container(
-        color: const Color(0xFF006994),
-        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Row(children: [
-                  CircleAvatar(radius: 14, backgroundColor: Color(0xFF00BCD4),
-                      child: Icon(Icons.public, color: Colors.white, size: 14)),
-                  SizedBox(width: 8),
-                  Text('Spoony Travel',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                ]),
-                const SizedBox(height: 16),
-                Text('Your premium gateway to the most beautiful destinations in Cebu, Philippines.',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13, height: 1.6)),
-              ]),
-            ),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Destinations',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 12),
-                for (final l in ['Cebu City', 'South Cebu', 'North Cebu', 'Bohol Side Tours'])
-                  Padding(padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(l, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13))),
-              ]),
-            ),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Support',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 12),
-                for (final l in ['Contact Us', 'FAQs', 'Privacy Policy', 'Terms of Service'])
-                  Padding(padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(l, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13))),
-              ]),
-            ),
-          ],
-        ),
-      ),
-      Container(
-        color: const Color(0xFF00507A),
-        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-        child: Center(
-          child: Text('© 2026 Spoony Travel and Tours. All rights reserved.',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
-        ),
-      ),
-    ]);
   }
 }
