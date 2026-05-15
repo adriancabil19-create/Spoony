@@ -1,6 +1,9 @@
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
 const dns = require('dns').promises;
 const { URL } = require('url');
+
+// Return NUMERIC/DECIMAL columns as JS numbers instead of strings
+types.setTypeParser(1700, (val) => val === null ? null : parseFloat(val));
 
 async function initPool() {
   const url = new URL(process.env.DATABASE_URL);
