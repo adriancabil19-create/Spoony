@@ -2,7 +2,11 @@
   "permissions": {
     "allow": [
       "Bash(flutter analyze *)",
-      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\Chad\\\\Desktop\\\\Spoony\\\\spoony_web\\\\backend\"; npm install; npm audit)"
+      "PowerShell($env:PATH = \"C:\\\\Program Files\\\\nodejs;$env:PATH\"; Set-Location \"C:\\\\Users\\\\Chad\\\\Desktop\\\\Spoony\\\\spoony_web\\\\backend\"; npm install; npm audit)",
+      "Bash(flutter build *)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }
