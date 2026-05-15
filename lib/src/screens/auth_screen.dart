@@ -18,6 +18,7 @@ class AuthScreen extends ConsumerStatefulWidget {
 class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _isAdminMode = false;
   bool _isSignUpMode = false;
+  bool _isPasswordRecovery = false;
   bool _rememberMe = true;
   bool _isLoading = false;
   bool _obscurePassword = true;
@@ -29,16 +30,26 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmNewPasswordController = TextEditingController();
 
   late final StreamSubscription<AuthState> _authSub;
 
   @override
   void initState() {
     super.initState();
-    // Handles OAuth redirect completion and all sign-in events
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (!mounted) return;
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        setState(() {
+          _isPasswordRecovery = true;
+          _errorMessage = null;
+          _successMessage = null;
+        });
+        return;
+      }
       if (data.event != AuthChangeEvent.signedIn) return;
+      if (_isPasswordRecovery) return; // stay on reset form until done
       final user = data.session?.user;
       if (user == null) return;
       final isAdmin = user.appMetadata['role'] == 'admin';
@@ -61,6 +72,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmNewPasswordController.dispose();
     super.dispose();
   }
 
@@ -139,6 +152,39 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         OAuthProvider.google,
         redirectTo: 'https://spoony.vercel.app',
       );
+    } on AuthException catch (e) {
+      setState(() => _errorMessage = e.message);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleResetPassword() async {
+    final password = _newPasswordController.text;
+    final confirm = _confirmNewPasswordController.text;
+    if (password.isEmpty || confirm.isEmpty) {
+      setState(() => _errorMessage = 'Please fill in both fields.');
+      return;
+    }
+    if (password != confirm) {
+      setState(() => _errorMessage = 'Passwords do not match.');
+      return;
+    }
+    if (password.length < 6) {
+      setState(() => _errorMessage = 'Password must be at least 6 characters.');
+      return;
+    }
+    setState(() { _isLoading = true; _errorMessage = null; });
+    try {
+      await Supabase.instance.client.auth.updateUser(UserAttributes(password: password));
+      await Supabase.instance.client.auth.signOut();
+      if (!mounted) return;
+      _newPasswordController.clear();
+      _confirmNewPasswordController.clear();
+      setState(() {
+        _isPasswordRecovery = false;
+        _successMessage = 'Password updated! Please sign in with your new password.';
+      });
     } on AuthException catch (e) {
       setState(() => _errorMessage = e.message);
     } finally {
@@ -233,9 +279,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(28),
-                      child: _isSignUpMode
-                          ? _buildSignUpForm(primary)
-                          : _buildLoginForm(primary),
+                      child: _isPasswordRecovery
+                          ? _buildResetPasswordForm(primary)
+                          : _isSignUpMode
+                              ? _buildSignUpForm(primary)
+                              : _buildLoginForm(primary),
                     ),
                   ),
                 ),
@@ -244,6 +292,77 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ── Reset password form ───────────────────────────────────────────────────
+
+  Widget _buildResetPasswordForm(Color primary) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Set New Password',
+          style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 10),
+        const Text(
+          'Enter and confirm your new password below.',
+          style: TextStyle(color: Colors.white70, height: 1.6),
+        ),
+        const SizedBox(height: 24),
+        TextField(
+          controller: _newPasswordController,
+          obscureText: _obscurePassword,
+          style: const TextStyle(color: Colors.white),
+          decoration: _field('New password (min. 6 chars)', Icons.lock).copyWith(
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                color: Colors.white70,
+              ),
+              onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        TextField(
+          controller: _confirmNewPasswordController,
+          obscureText: _obscureConfirm,
+          style: const TextStyle(color: Colors.white),
+          onSubmitted: (_) => _handleResetPassword(),
+          decoration: _field('Confirm new password', Icons.lock_outline).copyWith(
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscureConfirm ? Icons.visibility_off : Icons.visibility,
+                color: Colors.white70,
+              ),
+              onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+            ),
+          ),
+        ),
+        if (_errorMessage != null) ...[
+          const SizedBox(height: 10),
+          _errorBanner(_errorMessage!),
+        ],
+        const SizedBox(height: 20),
+        FilledButton(
+          onPressed: _isLoading ? null : _handleResetPassword,
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: primary,
+            padding: const EdgeInsets.symmetric(vertical: 18),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          ),
+          child: _isLoading
+              ? SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: primary),
+                )
+              : const Text('Update Password', style: TextStyle(fontWeight: FontWeight.w800)),
+        ),
+      ],
     );
   }
 
@@ -589,6 +708,7 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
                     try {
                       await Supabase.instance.client.auth.resetPasswordForEmail(
                         _ctrl.text.trim(),
+                        redirectTo: 'https://spoony.vercel.app/',
                       );
                       setState(() => _sent = true);
                     } on AuthException catch (e) {

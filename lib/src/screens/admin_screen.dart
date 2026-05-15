@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/api_service.dart';
+import '../data/cebu_data.dart';
 import 'home_screen.dart';
 import 'auth_screen.dart';
 
@@ -33,7 +34,6 @@ class _AdminScreenState extends State<AdminScreen> {
     (Icons.location_on, 'Manage Spots'),
     (Icons.hotel, 'Manage Hotels'),
     (Icons.directions_car, 'Manage Transport'),
-    (Icons.add_location_alt, 'Add Spot'),
   ];
 
   @override
@@ -47,7 +47,9 @@ class _AdminScreenState extends State<AdminScreen> {
       backgroundColor: const Color(0xFFF5F7F8),
       body: SingleChildScrollView(
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // ── Header ────────────────────────────────────────────────────
             Container(
               color: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -55,7 +57,8 @@ class _AdminScreenState extends State<AdminScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   GestureDetector(
-                    onTap: () => Navigator.pushReplacementNamed(context, HomeScreen.routeName),
+                    onTap: () =>
+                        Navigator.pushReplacementNamed(context, HomeScreen.routeName),
                     child: const Row(children: [
                       CircleAvatar(
                         radius: 16,
@@ -64,39 +67,51 @@ class _AdminScreenState extends State<AdminScreen> {
                       ),
                       SizedBox(width: 8),
                       Text('Spoony Admin',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF006994))),
+                          style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF006994))),
                     ]),
                   ),
                   Row(children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: const Color(0xFFE0F7FA),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(name,
-                          style: const TextStyle(color: Color(0xFF006994), fontWeight: FontWeight.w600, fontSize: 13)),
+                          style: const TextStyle(
+                              color: Color(0xFF006994),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13)),
                     ),
                     const SizedBox(width: 12),
                     FilledButton.icon(
                       onPressed: () async {
                         await Supabase.instance.client.auth.signOut();
                         if (context.mounted) {
-                          Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                          Navigator.pushReplacementNamed(
+                              context, AuthScreen.routeName);
                         }
                       },
                       icon: const Icon(Icons.logout, size: 16),
                       label: const Text('Sign Out'),
                       style: FilledButton.styleFrom(
                         backgroundColor: const Color(0xFFFF6B4A),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
                   ]),
                 ],
               ),
             ),
+
+            // ── Body ──────────────────────────────────────────────────────
             LayoutBuilder(builder: (ctx, constraints) {
               final mobile = constraints.maxWidth < 700;
               if (mobile) {
@@ -114,22 +129,34 @@ class _AdminScreenState extends State<AdminScreen> {
                             child: GestureDetector(
                               onTap: () => setState(() => _tab = i),
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 10),
                                 decoration: BoxDecoration(
-                                  color: sel ? const Color(0xFFE0F7FA) : Colors.white,
+                                  color: sel
+                                      ? const Color(0xFFE0F7FA)
+                                      : Colors.white,
                                   borderRadius: BorderRadius.circular(20),
                                   border: Border.all(
-                                      color: sel ? const Color(0xFF00BCD4) : const Color(0xFFE8EDEF)),
+                                      color: sel
+                                          ? const Color(0xFF00BCD4)
+                                          : const Color(0xFFE8EDEF)),
                                 ),
                                 child: Row(children: [
-                                  Icon(icon, size: 15,
-                                      color: sel ? const Color(0xFF006994) : const Color(0xFF8B99A6)),
+                                  Icon(icon,
+                                      size: 15,
+                                      color: sel
+                                          ? const Color(0xFF006994)
+                                          : const Color(0xFF8B99A6)),
                                   const SizedBox(width: 6),
                                   Text(label,
                                       style: TextStyle(
                                         fontSize: 12,
-                                        fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                                        color: sel ? const Color(0xFF006994) : const Color(0xFF8B99A6),
+                                        fontWeight: sel
+                                            ? FontWeight.w700
+                                            : FontWeight.w500,
+                                        color: sel
+                                            ? const Color(0xFF006994)
+                                            : const Color(0xFF8B99A6),
                                       )),
                                 ]),
                               ),
@@ -144,7 +171,8 @@ class _AdminScreenState extends State<AdminScreen> {
                 );
               }
               return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -155,7 +183,8 @@ class _AdminScreenState extends State<AdminScreen> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE8EDEF)),
+                          border:
+                              Border.all(color: const Color(0xFFE8EDEF)),
                         ),
                         child: Column(
                           children: List.generate(_tabs.length, (i) {
@@ -169,21 +198,31 @@ class _AdminScreenState extends State<AdminScreen> {
                                   onTap: () => setState(() => _tab = i),
                                   borderRadius: BorderRadius.circular(8),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 12),
                                     decoration: BoxDecoration(
-                                      color: sel ? const Color(0xFFE0F7FA) : Colors.transparent,
+                                      color: sel
+                                          ? const Color(0xFFE0F7FA)
+                                          : Colors.transparent,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Row(children: [
-                                      Icon(icon, size: 20,
-                                          color: sel ? const Color(0xFF00BCD4) : const Color(0xFF8B99A6)),
+                                      Icon(icon,
+                                          size: 20,
+                                          color: sel
+                                              ? const Color(0xFF00BCD4)
+                                              : const Color(0xFF8B99A6)),
                                       const SizedBox(width: 10),
                                       Expanded(
                                         child: Text(label,
                                             style: TextStyle(
                                               fontSize: 13,
-                                              fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                                              color: sel ? const Color(0xFF006994) : const Color(0xFF8B99A6),
+                                              fontWeight: sel
+                                                  ? FontWeight.w700
+                                                  : FontWeight.w500,
+                                              color: sel
+                                                  ? const Color(0xFF006994)
+                                                  : const Color(0xFF8B99A6),
                                             )),
                                       ),
                                     ]),
@@ -201,6 +240,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 ),
               );
             }),
+
             const SpoonyFooter(),
           ],
         ),
@@ -214,7 +254,6 @@ class _AdminScreenState extends State<AdminScreen> {
       case 1: return const _ManageSpotsTab();
       case 2: return const _ManageHotelsTab();
       case 3: return const _ManageTransportTab();
-      case 4: return const _AddSpotTab();
       default: return const _BookingsTab();
     }
   }
@@ -224,7 +263,6 @@ class _AdminScreenState extends State<AdminScreen> {
 
 class _BookingsTab extends StatefulWidget {
   const _BookingsTab();
-
   @override
   State<_BookingsTab> createState() => _BookingsTabState();
 }
@@ -288,7 +326,8 @@ class _BookingsTabState extends State<_BookingsTab> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text('All Bookings',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
+                style: TextStyle(
+                    fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
             IconButton(onPressed: _load, icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4))),
           ],
         ),
@@ -332,11 +371,8 @@ class _FilterChip extends StatelessWidget {
   final VoidCallback onTap;
 
   const _FilterChip({
-    required this.label,
-    required this.count,
-    required this.color,
-    required this.selected,
-    required this.onTap,
+    required this.label, required this.count, required this.color,
+    required this.selected, required this.onTap,
   });
 
   @override
@@ -428,11 +464,13 @@ class _BookingRow extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Text(ref,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF006994))),
+                style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF006994))),
             const Spacer(),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Text(amount,
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF50C878))),
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF50C878))),
               if (createdAt.isNotEmpty)
                 Text('Booked $createdAt',
                     style: const TextStyle(fontSize: 11, color: Color(0xFF8B99A6))),
@@ -447,12 +485,20 @@ class _BookingRow extends StatelessWidget {
           ]),
           const SizedBox(height: 8),
           Row(children: [
-            Expanded(child: _InfoRow(icon: Icons.calendar_today, label: 'Dates', value: '$startDate → $endDate')),
-            Expanded(child: _InfoRow(icon: Icons.hotel, label: 'Accommodation', value: accLabel)),
+            Expanded(
+                child: _InfoRow(
+                    icon: Icons.calendar_today,
+                    label: 'Dates',
+                    value: '$startDate → $endDate')),
+            Expanded(
+                child: _InfoRow(
+                    icon: Icons.hotel, label: 'Accommodation', value: accLabel)),
           ]),
           const SizedBox(height: 8),
           Row(children: [
-            Expanded(child: _InfoRow(icon: Icons.directions_car, label: 'Transport', value: transLabel)),
+            Expanded(
+                child: _InfoRow(
+                    icon: Icons.directions_car, label: 'Transport', value: transLabel)),
           ]),
           if (status == 'pending') ...[
             const SizedBox(height: 14),
@@ -521,19 +567,22 @@ class _InfoRow extends StatelessWidget {
       const SizedBox(width: 6),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(label, style: const TextStyle(fontSize: 10, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
-          Text(value, style: const TextStyle(fontSize: 13, color: Color(0xFF00314F), fontWeight: FontWeight.w500)),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 10, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
+          Text(value,
+              style: const TextStyle(
+                  fontSize: 13, color: Color(0xFF00314F), fontWeight: FontWeight.w500)),
         ]),
       ),
     ]);
   }
 }
 
-// ── Tab: Manage Spots ─────────────────────────────────────────────────────────
+// ── Tab: Manage Spots (combined with Add Spot) ────────────────────────────────
 
 class _ManageSpotsTab extends StatefulWidget {
   const _ManageSpotsTab();
-
   @override
   State<_ManageSpotsTab> createState() => _ManageSpotsTabState();
 }
@@ -542,6 +591,13 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
   bool _loading = true;
   List<Map<String, dynamic>> _spots = [];
   String? _error;
+
+  static const _regions = [
+    ('cebu_city', 'Cebu City'),
+    ('south_cebu', 'South Cebu'),
+    ('north_cebu', 'North Cebu'),
+    ('islands', 'Islands'),
+  ];
 
   @override
   void initState() {
@@ -553,16 +609,41 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
     setState(() { _loading = true; _error = null; });
     try {
       final result = await ApiService.getAllDestinations();
-      setState(() {
-        _spots = (result['destinations'] as List).cast<Map<String, dynamic>>();
-        _loading = false;
-      });
+      final dbSpots = (result['destinations'] as List).cast<Map<String, dynamic>>();
+      setState(() { _spots = dbSpots; _loading = false; });
     } catch (e) {
       setState(() { _error = e.toString(); _loading = false; });
     }
   }
 
+  // ── Merge: show cebu_data defaults not already in DB (matched by name) ──────
+  List<Map<String, dynamic>> get _mergedSpots {
+    final dbNames = _spots.map((s) => (s['name'] as String).toLowerCase()).toSet();
+    final defaults = cebuDestinations
+        .where((d) => !dbNames.contains(d.name.toLowerCase()))
+        .map((d) => {
+              '_isDefault': true,
+              'name': d.name,
+              'description': d.description,
+              'region': d.region.name,
+              'entrance_fee': d.entranceFee,
+              'latitude': d.coordinates['lat'],
+              'longitude': d.coordinates['lng'],
+              'image_urls': d.images,
+              'is_available': true,
+              'rating': d.rating,
+            })
+        .toList();
+    return [..._spots, ...defaults];
+  }
+
   Future<void> _toggleAvailability(Map<String, dynamic> spot) async {
+    if (spot['_isDefault'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Save this spot to the database first to manage it.')),
+      );
+      return;
+    }
     final current = spot['is_available'] as bool? ?? true;
     try {
       await ApiService.updateDestination(spot['id'] as String, {'isAvailable': !current});
@@ -572,44 +653,195 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
     }
   }
 
-  void _showEditPrice(Map<String, dynamic> spot) {
-    final ctrl = TextEditingController(
-        text: (spot['entrance_fee'] as num?)?.toStringAsFixed(0) ?? '0');
+  void _showAddDialog() => _showSpotDialog(null);
+
+  void _showEditDialog(Map<String, dynamic> spot) => _showSpotDialog(spot);
+
+  void _showSpotDialog(Map<String, dynamic>? existing) {
+    final isDefault = existing?['_isDefault'] == true;
+    final isEdit = existing != null && !isDefault;
+
+    final nameCtrl = TextEditingController(text: existing?['name'] as String? ?? '');
+    final descCtrl = TextEditingController(text: existing?['description'] as String? ?? '');
+    final feeCtrl = TextEditingController(
+        text: (existing?['entrance_fee'] as num?)?.toStringAsFixed(0) ?? '');
+    final latCtrl = TextEditingController(
+        text: (existing?['latitude'] as num?)?.toString() ?? '');
+    final lngCtrl = TextEditingController(
+        text: (existing?['longitude'] as num?)?.toString() ?? '');
+    final imgCtrl = TextEditingController(
+        text: (existing?['image_urls'] as List?)?.isNotEmpty == true
+            ? (existing!['image_urls'] as List).first as String
+            : '');
+
+    String region = existing?['region'] as String? ?? 'south_cebu';
+    bool saving = false;
+    String? errorMsg;
+
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Edit Price — ${spot['name']}'),
-        content: TextField(
-          controller: ctrl,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Entrance Fee (₱)',
-            border: OutlineInputBorder(),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => AlertDialog(
+          title: Text(isEdit ? 'Edit Spot' : (isDefault ? 'Save to Database' : 'Add New Spot'),
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF006994))),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isDefault) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFFB74D)),
+                      ),
+                      child: const Text(
+                        'This is a built-in default spot. Saving it will add it to your database so you can manage it here.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF795548)),
+                      ),
+                    ),
+                  ],
+                  if (errorMsg != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBEE),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(errorMsg!,
+                          style: const TextStyle(color: Color(0xFFFF6B4A), fontSize: 12)),
+                    ),
+                  ],
+                  _DlgField(label: 'Spot Name *', controller: nameCtrl, hint: 'e.g. Kawasan Falls'),
+                  const SizedBox(height: 12),
+                  _DlgField(
+                      label: 'Description',
+                      controller: descCtrl,
+                      hint: 'Brief description',
+                      maxLines: 3),
+                  const SizedBox(height: 12),
+                  const Text('Region *',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5D6D7A))),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: _regions.any((r) => r.$1 == region) ? region : _regions.first.$1,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                    items: _regions
+                        .map((r) => DropdownMenuItem(value: r.$1, child: Text(r.$2)))
+                        .toList(),
+                    onChanged: (v) { if (v != null) setDlg(() => region = v); },
+                  ),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: _DlgField(
+                        label: 'Entrance Fee (₱) *',
+                        controller: feeCtrl,
+                        hint: '0',
+                        keyboardType: TextInputType.number)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _DlgField(
+                        label: 'Latitude',
+                        controller: latCtrl,
+                        hint: '10.3157',
+                        keyboardType: TextInputType.number)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _DlgField(
+                        label: 'Longitude',
+                        controller: lngCtrl,
+                        hint: '123.8854',
+                        keyboardType: TextInputType.number)),
+                  ]),
+                  const SizedBox(height: 12),
+                  _DlgField(
+                      label: 'Image URL',
+                      controller: imgCtrl,
+                      hint: 'https://...'),
+                ],
+              ),
+            ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      if (nameCtrl.text.trim().isEmpty || feeCtrl.text.isEmpty) {
+                        setDlg(() => errorMsg = 'Name and entrance fee are required.');
+                        return;
+                      }
+                      setDlg(() { saving = true; errorMsg = null; });
+                      try {
+                        final data = {
+                          'name': nameCtrl.text.trim(),
+                          'description': descCtrl.text.trim(),
+                          'region': region,
+                          'entranceFee': double.tryParse(feeCtrl.text) ?? 0,
+                          'latitude': double.tryParse(latCtrl.text) ?? 10.3157,
+                          'longitude': double.tryParse(lngCtrl.text) ?? 123.8854,
+                          'imageUrls': imgCtrl.text.trim().isNotEmpty ? [imgCtrl.text.trim()] : [],
+                        };
+                        if (isEdit) {
+                          await ApiService.updateDestination(existing['id'] as String, data);
+                        } else {
+                          await ApiService.addDestination(data);
+                        }
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        _load();
+                      } catch (e) {
+                        setDlg(() { saving = false; errorMsg = e.toString(); });
+                      }
+                    },
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF006994)),
+              child: saving
+                  ? const SizedBox(
+                      height: 16, width: 16,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(isEdit ? 'Save Changes' : 'Add Spot'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () async {
-              final fee = double.tryParse(ctrl.text);
-              if (fee == null) return;
-              Navigator.pop(context);
-              try {
-                await ApiService.updateDestination(spot['id'] as String, {'entranceFee': fee});
-                _load();
-              } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-              }
-            },
-            child: const Text('Save'),
-          ),
-        ],
       ),
     );
   }
 
+  Future<void> _deleteSpot(Map<String, dynamic> spot) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Spot'),
+        content: Text('Remove "${spot['name']}" from the platform?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF6B4A)),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await ApiService.delete('/destinations/${spot['id']}');
+      _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final all = _mergedSpots;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -617,22 +849,41 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text('Manage Spots',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
-            IconButton(onPressed: _load, icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4))),
+                style: TextStyle(
+                    fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
+            Row(children: [
+              IconButton(
+                  onPressed: _load, icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4))),
+              FilledButton.icon(
+                onPressed: _showAddDialog,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Spot'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF006994),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ]),
           ],
         ),
         const SizedBox(height: 4),
-        const Text('Edit prices and toggle spot availability.',
+        const Text('Edit, add, or toggle visibility of tour destinations.',
             style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
         const SizedBox(height: 20),
         if (_loading)
           const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
-        else if (_error != null)
+        else if (_error != null && _spots.isEmpty)
           _AdminEmpty(message: _error!)
-        else if (_spots.isEmpty)
-          const _AdminEmpty(message: 'No destinations yet. Use "Add Spot" to create one.')
+        else if (all.isEmpty)
+          const _AdminEmpty(message: 'No spots yet. Click "Add Spot" to create one.')
         else
-          for (final s in _spots) _SpotRow(spot: s, onToggle: _toggleAvailability, onEditPrice: _showEditPrice),
+          for (final s in all) _SpotRow(
+            spot: s,
+            onEdit: () => _showEditDialog(s),
+            onToggle: () => _toggleAvailability(s),
+            onDelete: s['_isDefault'] == true ? null : () => _deleteSpot(s),
+          ),
       ],
     );
   }
@@ -640,15 +891,22 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
 
 class _SpotRow extends StatelessWidget {
   final Map<String, dynamic> spot;
-  final Future<void> Function(Map<String, dynamic>) onToggle;
-  final void Function(Map<String, dynamic>) onEditPrice;
+  final VoidCallback onEdit;
+  final VoidCallback onToggle;
+  final VoidCallback? onDelete;
 
-  const _SpotRow({required this.spot, required this.onToggle, required this.onEditPrice});
+  const _SpotRow({
+    required this.spot,
+    required this.onEdit,
+    required this.onToggle,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
     final available = spot['is_available'] as bool? ?? true;
     final fee = (spot['entrance_fee'] as num?)?.toStringAsFixed(0) ?? '0';
+    final isDefault = spot['_isDefault'] == true;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -656,46 +914,90 @@ class _SpotRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE8EDEF)),
+        border: Border.all(
+            color: isDefault ? const Color(0xFFFFCC80) : const Color(0xFFE8EDEF)),
       ),
-      child: Row(children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE0F7FA),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(Icons.location_on, color: Color(0xFF006994), size: 20),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(spot['name'] as String? ?? '—',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
-            const SizedBox(height: 2),
-            Text('${spot['region'] ?? ''} · ₱$fee entrance',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6))),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: isDefault
+                    ? const Color(0xFFFFF3E0)
+                    : const Color(0xFFE0F7FA),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                isDefault ? Icons.bookmark_outline : Icons.location_on,
+                color: isDefault ? const Color(0xFFFF8C00) : const Color(0xFF006994),
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Flexible(
+                    child: Text(spot['name'] as String? ?? '—',
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                  ),
+                  if (isDefault) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFCC80),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text('Default',
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF795548))),
+                    ),
+                  ],
+                ]),
+                const SizedBox(height: 2),
+                Text('${spot['region'] ?? ''} · ₱$fee entrance',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6))),
+              ]),
+            ),
+            // Action buttons
+            TextButton.icon(
+              onPressed: onEdit,
+              icon: const Icon(Icons.edit, size: 15),
+              label: Text(isDefault ? 'Save to DB' : 'Edit'),
+              style: TextButton.styleFrom(
+                  foregroundColor: isDefault ? const Color(0xFFFF8C00) : const Color(0xFF006994),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
+            ),
+            if (!isDefault) ...[
+              Switch(
+                value: available,
+                onChanged: (_) => onToggle(),
+                activeThumbColor: const Color(0xFF00BCD4),
+              ),
+              Text(available ? 'On' : 'Off',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: available ? const Color(0xFF50C878) : const Color(0xFFFF6B4A),
+                  )),
+              const SizedBox(width: 4),
+              IconButton(
+                onPressed: onDelete,
+                icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFFF6B4A)),
+                tooltip: 'Delete spot',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
           ]),
-        ),
-        TextButton.icon(
-          onPressed: () => onEditPrice(spot),
-          icon: const Icon(Icons.edit, size: 16),
-          label: const Text('Price'),
-          style: TextButton.styleFrom(foregroundColor: const Color(0xFF006994)),
-        ),
-        const SizedBox(width: 4),
-        Switch(
-          value: available,
-          onChanged: (_) => onToggle(spot),
-          activeThumbColor: const Color(0xFF00BCD4),
-        ),
-        Text(available ? 'Available' : 'Hidden',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: available ? const Color(0xFF50C878) : const Color(0xFFFF6B4A),
-            )),
-      ]),
+        ],
+      ),
     );
   }
 }
@@ -704,7 +1006,6 @@ class _SpotRow extends StatelessWidget {
 
 class _ManageHotelsTab extends StatefulWidget {
   const _ManageHotelsTab();
-
   @override
   State<_ManageHotelsTab> createState() => _ManageHotelsTabState();
 }
@@ -721,10 +1022,7 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
   ];
 
   @override
-  void initState() {
-    super.initState();
-    _load();
-  }
+  void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
     setState(() => _loading = true);
@@ -853,7 +1151,8 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Row(children: [
                       Text(hotel['title'] as String? ?? '—',
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                          style: const TextStyle(
+                              fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
                       const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -875,7 +1174,8 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 6),
                     Text('₱${(hotel['nightly_rate'] as num?)?.toStringAsFixed(0) ?? '0'} / night',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF50C878))),
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF50C878))),
                   ]),
                 ),
                 const SizedBox(width: 12),
@@ -895,11 +1195,9 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
                     Text(
                       (hotel['is_active'] as bool? ?? true) ? 'Active' : 'Hidden',
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 12, fontWeight: FontWeight.w600,
                         color: (hotel['is_active'] as bool? ?? true)
-                            ? const Color(0xFF50C878)
-                            : const Color(0xFFFF6B4A),
+                            ? const Color(0xFF50C878) : const Color(0xFFFF6B4A),
                       ),
                     ),
                   ]),
@@ -916,7 +1214,6 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
 
 class _ManageTransportTab extends StatefulWidget {
   const _ManageTransportTab();
-
   @override
   State<_ManageTransportTab> createState() => _ManageTransportTabState();
 }
@@ -938,10 +1235,7 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
   };
 
   @override
-  void initState() {
-    super.initState();
-    _load();
-  }
+  void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
     setState(() => _loading = true);
@@ -1055,22 +1349,23 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
                   ),
                   child: Icon(
                     _transIcons[t['id'] as String? ?? ''] ?? Icons.directions_car,
-                    color: const Color(0xFF006994),
-                    size: 26,
+                    color: const Color(0xFF006994), size: 26,
                   ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(t['title'] as String? ?? '—',
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
                     const SizedBox(height: 4),
                     Text(t['description'] as String? ?? '',
                         style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6)),
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                     const SizedBox(height: 6),
                     Text('₱${(t['price'] as num?)?.toStringAsFixed(0) ?? '0'} per trip',
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF50C878))),
+                        style: const TextStyle(
+                            fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF50C878))),
                   ]),
                 ),
                 const SizedBox(width: 12),
@@ -1090,11 +1385,9 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
                     Text(
                       (t['is_active'] as bool? ?? true) ? 'Active' : 'Hidden',
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 12, fontWeight: FontWeight.w600,
                         color: (t['is_active'] as bool? ?? true)
-                            ? const Color(0xFF50C878)
-                            : const Color(0xFFFF6B4A),
+                            ? const Color(0xFF50C878) : const Color(0xFFFF6B4A),
                       ),
                     ),
                   ]),
@@ -1107,191 +1400,16 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
   }
 }
 
-// ── Tab: Add Spot ─────────────────────────────────────────────────────────────
-
-class _AddSpotTab extends StatefulWidget {
-  const _AddSpotTab();
-
-  @override
-  State<_AddSpotTab> createState() => _AddSpotTabState();
-}
-
-class _AddSpotTabState extends State<_AddSpotTab> {
-  final _nameCtrl = TextEditingController();
-  final _descCtrl = TextEditingController();
-  final _feeCtrl = TextEditingController();
-  final _latCtrl = TextEditingController();
-  final _lngCtrl = TextEditingController();
-  final _imgCtrl = TextEditingController();
-  String _region = 'south_cebu';
-  bool _saving = false;
-  String? _success;
-  String? _error;
-
-  static const _regions = [
-    ('cebu_city', 'Cebu City'),
-    ('south_cebu', 'South Cebu'),
-    ('north_cebu', 'North Cebu'),
-    ('islands', 'Islands'),
-  ];
-
-  @override
-  void dispose() {
-    _nameCtrl.dispose();
-    _descCtrl.dispose();
-    _feeCtrl.dispose();
-    _latCtrl.dispose();
-    _lngCtrl.dispose();
-    _imgCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    if (_nameCtrl.text.trim().isEmpty || _feeCtrl.text.isEmpty) {
-      setState(() => _error = 'Name and entrance fee are required.');
-      return;
-    }
-    setState(() { _saving = true; _error = null; _success = null; });
-    try {
-      await ApiService.addDestination({
-        'name': _nameCtrl.text.trim(),
-        'description': _descCtrl.text.trim(),
-        'region': _region,
-        'entranceFee': double.tryParse(_feeCtrl.text) ?? 0,
-        'latitude': double.tryParse(_latCtrl.text) ?? 10.3157,
-        'longitude': double.tryParse(_lngCtrl.text) ?? 123.8854,
-        'imageUrls': _imgCtrl.text.trim().isNotEmpty ? [_imgCtrl.text.trim()] : [],
-      });
-      setState(() {
-        _saving = false;
-        _success = 'Spot "${_nameCtrl.text.trim()}" added successfully!';
-        _nameCtrl.clear(); _descCtrl.clear(); _feeCtrl.clear();
-        _latCtrl.clear(); _lngCtrl.clear(); _imgCtrl.clear();
-      });
-    } catch (e) {
-      setState(() { _saving = false; _error = e.toString(); });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('Add New Spot',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
-        const SizedBox(height: 4),
-        const Text('Add a new destination to the platform.',
-            style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
-        const SizedBox(height: 20),
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE8EDEF)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (_success != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF50C878).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(children: [
-                    const Icon(Icons.check_circle, color: Color(0xFF50C878), size: 18),
-                    const SizedBox(width: 8),
-                    Text(_success!, style: const TextStyle(color: Color(0xFF50C878), fontWeight: FontWeight.w600)),
-                  ]),
-                ),
-                const SizedBox(height: 16),
-              ],
-              if (_error != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF6B4A).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(children: [
-                    const Icon(Icons.error_outline, color: Color(0xFFFF6B4A), size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(child: Text(_error!, style: const TextStyle(color: Color(0xFFFF6B4A)))),
-                  ]),
-                ),
-                const SizedBox(height: 16),
-              ],
-              _FormField(label: 'Spot Name *', controller: _nameCtrl, hint: 'e.g. Kawasan Falls'),
-              const SizedBox(height: 16),
-              _FormField(label: 'Description', controller: _descCtrl, hint: 'Brief description of the spot', maxLines: 3),
-              const SizedBox(height: 16),
-              const Text('Region *',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5D6D7A))),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<String>(
-                initialValue: _region,
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                ),
-                items: _regions.map((r) => DropdownMenuItem(value: r.$1, child: Text(r.$2))).toList(),
-                onChanged: (v) { if (v != null) setState(() => _region = v); },
-              ),
-              const SizedBox(height: 16),
-              Row(children: [
-                Expanded(child: _FormField(
-                    label: 'Entrance Fee (₱) *', controller: _feeCtrl,
-                    hint: '0', keyboardType: TextInputType.number)),
-                const SizedBox(width: 16),
-                Expanded(child: _FormField(
-                    label: 'Latitude', controller: _latCtrl,
-                    hint: '10.3157', keyboardType: TextInputType.number)),
-                const SizedBox(width: 16),
-                Expanded(child: _FormField(
-                    label: 'Longitude', controller: _lngCtrl,
-                    hint: '123.8854', keyboardType: TextInputType.number)),
-              ]),
-              const SizedBox(height: 16),
-              _FormField(label: 'Image URL', controller: _imgCtrl, hint: 'https://...'),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : _save,
-                  icon: _saving
-                      ? const SizedBox(height: 16, width: 16,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                      : const Icon(Icons.add_location_alt),
-                  label: Text(_saving ? 'Saving…' : 'Add Spot',
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF006994),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-class _FormField extends StatelessWidget {
+class _DlgField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final String hint;
   final int maxLines;
   final TextInputType keyboardType;
 
-  const _FormField({
+  const _DlgField({
     required this.label,
     required this.controller,
     required this.hint,
@@ -1305,8 +1423,9 @@ class _FormField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5D6D7A))),
-        const SizedBox(height: 8),
+            style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5D6D7A))),
+        const SizedBox(height: 6),
         TextField(
           controller: controller,
           maxLines: maxLines,
@@ -1314,7 +1433,7 @@ class _FormField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hint,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           ),
         ),
       ],

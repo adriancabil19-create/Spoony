@@ -124,7 +124,7 @@ final List<Destination> cebuDestinations = [
   Destination(
     id: 'tarsier_sanctuary',
     name: 'Tarsier Sanctuary',
-    description: 'Visit the world-famous tarsier preserve and learn about Bohol’s smallest primates.',
+    description: 'Visit the world-famous tarsier preserve and learn about Bohol\'s smallest primates.',
     region: DestinationRegion.bohol,
     images: [
       'https://images.unsplash.com/photo-1553617214-6c6da99b50bb?auto=format&fit=crop&w=900&q=80',
@@ -187,6 +187,116 @@ final List<TransportOption> transports = [
     title: 'Private SUV',
     description: 'Spacious SUV for families and premium road comfort.',
     price: 2400,
+  ),
+];
+
+const List<TourPackage> tourPackages = [
+  TourPackage(
+    id: 'pkg_cebu_city',
+    name: 'Cebu City Highlights',
+    tagline: 'Art, temples & hillside views in one day',
+    description:
+        'Explore Cebu City\'s most iconic landmarks — from the enchanting Sirao Flower Garden to the grand Temple of Leah and the colourful Taoist Temple perched on the hills.',
+    highlights: [
+      'Sirao Flower Garden',
+      'Temple of Leah',
+      'Taoist Temple',
+      'Tops Lookout Viewpoint',
+    ],
+    durationDays: 1,
+    joinerPricePerPerson: 599,
+    premiumPricePerPerson: 1499,
+    imageUrl:
+        'https://images.unsplash.com/photo-1778477501822-d4236715cd96?auto=format&fit=crop&w=900&q=80',
+    region: 'Cebu City',
+  ),
+  TourPackage(
+    id: 'pkg_south_cebu',
+    name: 'South Cebu Adventure',
+    tagline: 'Waterfalls, canyoneering & whale sharks',
+    description:
+        'The ultimate South Cebu experience — canyon through the iconic turquoise waters of Kawasan Falls, then head to Oslob to swim alongside the world\'s largest fish.',
+    highlights: [
+      'Kawasan Falls Canyoneering',
+      'Oslob Whale Shark Watching',
+      'Sumilon Island Sandbar Stop',
+      'Moalboal Sardine Run',
+    ],
+    durationDays: 1,
+    joinerPricePerPerson: 1899,
+    premiumPricePerPerson: 3499,
+    imageUrl:
+        'https://images.unsplash.com/photo-1620658927695-c33df6fb8130?auto=format&fit=crop&w=900&q=80',
+    region: 'South Cebu',
+  ),
+  TourPackage(
+    id: 'pkg_north_islands',
+    name: 'North Cebu Island Hop',
+    tagline: 'Pristine sandbars & thresher shark dives',
+    description:
+        'A 2-day island escape to the north — discover the powder-white sands of Malapascua, dive with elusive thresher sharks at dawn, then lounge on the legendary Kalanggaman sandbar.',
+    highlights: [
+      'Malapascua Island Beach',
+      'Thresher Shark Diving (Monad Shoal)',
+      'Kalanggaman Island Sandbar',
+      'Snorkeling & Marine Life',
+    ],
+    durationDays: 2,
+    joinerPricePerPerson: 3299,
+    premiumPricePerPerson: 5999,
+    imageUrl:
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80',
+    region: 'North Cebu',
+  ),
+  TourPackage(
+    id: 'pkg_bohol',
+    name: 'Bohol Day Trip',
+    tagline: 'Chocolate hills, tarsiers & river cruise',
+    description:
+        'Take the ferry from Cebu to Bohol for a full-day adventure — gaze over the rolling Chocolate Hills, meet the world\'s tiniest primates, and drift along the jungle-lined Loboc River.',
+    highlights: [
+      'Chocolate Hills Viewpoint',
+      'Philippine Tarsier Sanctuary',
+      'Loboc River Lunch Cruise',
+      'Panglao Beach Sunset',
+    ],
+    durationDays: 1,
+    joinerPricePerPerson: 2299,
+    premiumPricePerPerson: 4199,
+    imageUrl:
+        'https://images.unsplash.com/photo-1476988186444-a7189cf07b3f?auto=format&fit=crop&w=900&q=80',
+    region: 'Bohol',
+  ),
+];
+
+const List<TourAddOn> tourAddOns = [
+  TourAddOn(
+    id: 'addon_photo',
+    title: 'Professional Photographer',
+    emoji: '📸',
+    price: 800,
+    perPerson: false,
+  ),
+  TourAddOn(
+    id: 'addon_snorkel',
+    title: 'Snorkeling Gear Rental',
+    emoji: '🤿',
+    price: 350,
+    perPerson: true,
+  ),
+  TourAddOn(
+    id: 'addon_lunch',
+    title: 'Packed Lunch',
+    emoji: '🍱',
+    price: 280,
+    perPerson: true,
+  ),
+  TourAddOn(
+    id: 'addon_guide',
+    title: 'Personal Tour Guide',
+    emoji: '🗺️',
+    price: 900,
+    perPerson: false,
   ),
 ];
 

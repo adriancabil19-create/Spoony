@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 enum DestinationRegion { all, cebuCity, southCebu, northCebu, bohol }
 
+enum TourType { joiner, premium }
+
 typedef LatLngCoordinate = Map<String, double>;
 
 class Destination {
@@ -59,6 +61,48 @@ class TransportOption {
     required this.title,
     required this.description,
     required this.price,
+  });
+}
+
+class TourPackage {
+  final String id;
+  final String name;
+  final String tagline;
+  final String description;
+  final List<String> highlights;
+  final int durationDays;
+  final double joinerPricePerPerson;
+  final double premiumPricePerPerson;
+  final String imageUrl;
+  final String region;
+
+  const TourPackage({
+    required this.id,
+    required this.name,
+    required this.tagline,
+    required this.description,
+    required this.highlights,
+    required this.durationDays,
+    required this.joinerPricePerPerson,
+    required this.premiumPricePerPerson,
+    required this.imageUrl,
+    required this.region,
+  });
+}
+
+class TourAddOn {
+  final String id;
+  final String title;
+  final String emoji;
+  final double price;
+  final bool perPerson;
+
+  const TourAddOn({
+    required this.id,
+    required this.title,
+    required this.emoji,
+    required this.price,
+    required this.perPerson,
   });
 }
 
