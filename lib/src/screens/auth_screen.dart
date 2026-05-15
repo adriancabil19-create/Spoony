@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../screens/home_screen.dart';
-import '../screens/dashboard_screen.dart';
+import '../screens/admin_screen.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   static const routeName = '/';
@@ -49,7 +49,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       }
       Navigator.pushReplacementNamed(
         context,
-        isAdmin ? DashboardScreen.routeName : HomeScreen.routeName,
+        isAdmin ? AdminScreen.routeName : HomeScreen.routeName,
       );
     });
   }
@@ -85,7 +85,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       if (!mounted) return;
       Navigator.pushReplacementNamed(
         context,
-        _isAdminMode ? DashboardScreen.routeName : HomeScreen.routeName,
+        _isAdminMode ? AdminScreen.routeName : HomeScreen.routeName,
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);

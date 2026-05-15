@@ -76,6 +76,15 @@ class ApiService {
   static Future<Map<String, dynamic>> getDestinations() =>
       get('/destinations');
 
+  static Future<Map<String, dynamic>> getAllDestinations() =>
+      get('/destinations?all=true');
+
+  static Future<Map<String, dynamic>> updateDestination(String id, Map<String, dynamic> data) =>
+      put('/destinations/$id', data);
+
+  static Future<Map<String, dynamic>> addDestination(Map<String, dynamic> data) =>
+      post('/destinations', data);
+
   static Future<Map<String, dynamic>> getDestinationById(String id) =>
       get('/destinations/$id');
 
@@ -102,6 +111,9 @@ class ApiService {
 
   static Future<Map<String, dynamic>> approveBooking(String bookingId) =>
       put('/bookings/$bookingId/approve', {});
+
+  static Future<Map<String, dynamic>> rejectBooking(String bookingId) =>
+      put('/bookings/$bookingId/reject', {});
 
   // Payments
   static Future<Map<String, dynamic>> uploadPaymentReceipt(

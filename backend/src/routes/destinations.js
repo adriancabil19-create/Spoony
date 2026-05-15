@@ -8,11 +8,20 @@ const router = express.Router();
 
 // GET /api/destinations
 router.get('/', async (req, res) => {
-  const { region } = req.query;
+  const { region, all } = req.query;
   try {
-    const result = region
-      ? await pool.query('SELECT * FROM destinations WHERE region = $1 ORDER BY rating DESC', [region])
-      : await pool.query('SELECT * FROM destinations ORDER BY rating DESC');
+    let result;
+    if (all === 'true') {
+      // Admin: return all including unavailable
+      result = region
+        ? await pool.query('SELECT * FROM destinations WHERE region = $1 ORDER BY rating DESC', [region])
+        : await pool.query('SELECT * FROM destinations ORDER BY rating DESC');
+    } else {
+      // Guest: only available destinations
+      result = region
+        ? await pool.query('SELECT * FROM destinations WHERE region = $1 AND is_available = TRUE ORDER BY rating DESC', [region])
+        : await pool.query('SELECT * FROM destinations WHERE is_available = TRUE ORDER BY rating DESC');
+    }
     res.json({ destinations: result.rows });
   } catch {
     res.status(500).json({ message: 'Could not fetch destinations.' });
@@ -86,7 +95,7 @@ router.post(
 
 // PUT /api/destinations/:id
 router.put('/:id', adminOnly, async (req, res) => {
-  const { name, description, region, imageUrls, entranceFee, latitude, longitude, travelTime } = req.body;
+  const { name, description, region, imageUrls, entranceFee, latitude, longitude, travelTime, isAvailable } = req.body;
   try {
     const result = await pool.query(
       `UPDATE destinations SET
@@ -97,9 +106,10 @@ router.put('/:id', adminOnly, async (req, res) => {
          entrance_fee = COALESCE($5, entrance_fee),
          latitude = COALESCE($6, latitude),
          longitude = COALESCE($7, longitude),
-         travel_time = COALESCE($8, travel_time)
-       WHERE id = $9 RETURNING *`,
-      [name, description, region, imageUrls, entranceFee, latitude, longitude, travelTime, req.params.id],
+         travel_time = COALESCE($8, travel_time),
+         is_available = COALESCE($9, is_available)
+       WHERE id = $10 RETURNING *`,
+      [name, description, region, imageUrls, entranceFee, latitude, longitude, travelTime, isAvailable, req.params.id],
     );
     if (result.rows.length === 0) return res.status(404).json({ message: 'Destination not found.' });
     res.json({ destination: result.rows[0] });

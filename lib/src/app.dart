@@ -5,6 +5,7 @@ import 'screens/home_screen.dart';
 import 'screens/explore_screen.dart';
 import 'screens/booking_screen.dart';
 import 'screens/dashboard_screen.dart';
+import 'screens/admin_screen.dart';
 
 class SpoonyApp extends StatelessWidget {
   const SpoonyApp({super.key});
@@ -48,6 +49,7 @@ class SpoonyApp extends StatelessWidget {
             ExploreScreen.routeName: (context) => const ExploreScreen(),
             BookingScreen.routeName: (context) => const BookingScreen(),
             DashboardScreen.routeName: (context) => const DashboardScreen(),
+            AdminScreen.routeName: (context) => const AdminScreen(),
           },
         );
   }

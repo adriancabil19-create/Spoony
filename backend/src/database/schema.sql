@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS destinations (
   longitude            NUMERIC(10,7),
   travel_time          VARCHAR(50),
   average_distance_km  NUMERIC(8,2),
+  is_available         BOOLEAN DEFAULT TRUE,
   created_at           TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -132,3 +133,11 @@ CREATE INDEX IF NOT EXISTS idx_bookings_status     ON bookings(status);
 CREATE INDEX IF NOT EXISTS idx_payments_booking_id ON payments(booking_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_destination ON reviews(destination_id);
 CREATE INDEX IF NOT EXISTS idx_notif_user_id       ON notifications(user_id);
+
+-- Migrations: drop local FK constraints so Supabase auth UUIDs can be stored directly
+ALTER TABLE IF EXISTS bookings       DROP CONSTRAINT IF EXISTS bookings_user_id_fkey;
+ALTER TABLE IF EXISTS notifications  DROP CONSTRAINT IF EXISTS notifications_user_id_fkey;
+ALTER TABLE IF EXISTS payments       DROP CONSTRAINT IF EXISTS payments_user_id_fkey;
+
+-- Add is_available to destinations if not already present
+ALTER TABLE IF EXISTS destinations ADD COLUMN IF NOT EXISTS is_available BOOLEAN DEFAULT TRUE;

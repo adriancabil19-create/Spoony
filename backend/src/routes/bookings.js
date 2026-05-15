@@ -1,9 +1,10 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const QRCode = require('qrcode');
-const { v4: uuidv4 } = require('uuid');
 const pool = require('../config/database');
+const { supabaseAdmin } = require('../config/supabase');
 const { authenticate, adminOnly } = require('../middleware/auth');
+const { sendBookingConfirmation } = require('../services/email_service');
 
 const router = express.Router();
 
@@ -16,7 +17,7 @@ router.post(
   '/',
   authenticate,
   [
-    body('destinationIds').isArray({ min: 1 }).withMessage('At least one destination required.'),
+    body('destinationIds').isArray(),
     body('guestCount').isInt({ min: 1 }),
     body('startDate').isISO8601(),
     body('endDate').isISO8601(),
@@ -45,19 +46,32 @@ router.post(
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
          RETURNING *`,
         [
-          req.user.id, tourId || null, destinationIds, accommodationType,
+          req.user.id, tourId || null, destinationIds || [], accommodationType,
           transportType, guestCount, startDate, endDate, totalAmount, ref, qrUrl,
         ],
       );
 
-      await pool.query(
-        `INSERT INTO notifications (user_id, title, body, type)
-         VALUES ($1, $2, $3, $4)`,
-        [req.user.id, 'Booking Received', `Your booking ${ref} is pending confirmation.`, 'booking'],
-      );
+      const booking = result.rows[0];
 
-      res.status(201).json({ booking: result.rows[0] });
+      // Send confirmation email (non-blocking)
+      try {
+        const { data: { user: supaUser } } = await supabaseAdmin.auth.admin.getUserById(req.user.id);
+        if (supaUser?.email) {
+          sendBookingConfirmation({
+            to: supaUser.email,
+            name: supaUser.user_metadata?.name || supaUser.user_metadata?.full_name || '',
+            referenceCode: ref,
+            startDate,
+            endDate,
+            guestCount,
+            totalAmount,
+          });
+        }
+      } catch (_) {}
+
+      res.status(201).json({ booking });
     } catch (err) {
+      console.error(err);
       res.status(500).json({ message: 'Could not create booking.' });
     }
   },
@@ -96,23 +110,39 @@ router.put('/:id/cancel', authenticate, async (req, res) => {
 
 // GET /api/bookings — all bookings (admin)
 router.get('/', adminOnly, async (req, res) => {
-  const { status, page = 1, limit = 20 } = req.query;
+  const { status, page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * limit;
-  const conditions = status ? `WHERE status = $1` : '';
-  const params = status ? [status, limit, offset] : [limit, offset];
-  const statusIdx = status ? 3 : 1;
 
   try {
-    const result = await pool.query(
-      `SELECT b.*, u.name AS user_name, u.email AS user_email
-       FROM bookings b
-       LEFT JOIN users u ON b.user_id = u.id
-       ${conditions}
-       ORDER BY b.created_at DESC
-       LIMIT $${statusIdx} OFFSET $${statusIdx + 1}`,
-      params,
-    );
-    res.json({ bookings: result.rows });
+    let query, params;
+    if (status) {
+      query = 'SELECT * FROM bookings WHERE status = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3';
+      params = [status, limit, offset];
+    } else {
+      query = 'SELECT * FROM bookings ORDER BY created_at DESC LIMIT $1 OFFSET $2';
+      params = [limit, offset];
+    }
+    const result = await pool.query(query, params);
+
+    // Fetch user emails from Supabase in one call
+    let userMap = {};
+    try {
+      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+      users.forEach(u => {
+        userMap[u.id] = {
+          email: u.email || '',
+          name: u.user_metadata?.name || u.user_metadata?.full_name || '',
+        };
+      });
+    } catch (_) {}
+
+    const bookings = result.rows.map(b => ({
+      ...b,
+      user_email: userMap[b.user_id]?.email || '',
+      user_name: userMap[b.user_id]?.name || '',
+    }));
+
+    res.json({ bookings });
   } catch {
     res.status(500).json({ message: 'Could not fetch bookings.' });
   }
@@ -130,15 +160,27 @@ router.put('/:id/approve', adminOnly, async (req, res) => {
     if (result.rows.length === 0) {
       return res.status(404).json({ message: 'Booking not found or already processed.' });
     }
-    const booking = result.rows[0];
-    await pool.query(
-      `INSERT INTO notifications (user_id, title, body, type)
-       VALUES ($1, $2, $3, $4)`,
-      [booking.user_id, 'Booking Confirmed!', `Your booking ${booking.reference_code} is confirmed.`, 'booking'],
-    );
-    res.json({ booking });
+    res.json({ booking: result.rows[0] });
   } catch {
     res.status(500).json({ message: 'Could not approve booking.' });
+  }
+});
+
+// PUT /api/bookings/:id/reject — admin rejects/cancels booking
+router.put('/:id/reject', adminOnly, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE bookings SET status = 'cancelled', updated_at = NOW()
+       WHERE id = $1 AND status IN ('pending', 'confirmed')
+       RETURNING *`,
+      [req.params.id],
+    );
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: 'Booking not found or already cancelled.' });
+    }
+    res.json({ booking: result.rows[0] });
+  } catch {
+    res.status(500).json({ message: 'Could not reject booking.' });
   }
 });
 

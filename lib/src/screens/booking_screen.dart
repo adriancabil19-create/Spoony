@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/cebu_data.dart';
 import '../models.dart';
 import '../services/distance_service.dart';
+import '../services/api_service.dart';
 
 class BookingScreen extends StatefulWidget {
   static const routeName = '/booking';
@@ -22,6 +24,7 @@ class _BookingScreenState extends State<BookingScreen> {
   DateTime? _endDate;
   bool _bookingSuccess = false;
   bool _isProcessing = false;
+  String _bookingRef = '';
 
   List<Destination> get _selectedSpots =>
       cebuDestinations.where((s) => _selectedSpotIds.contains(s.id)).toList();
@@ -74,17 +77,40 @@ class _BookingScreenState extends State<BookingScreen> {
     });
   }
 
-  void _completeBooking() {
+  Future<void> _completeBooking() async {
     if (_selectedSpotIds.isEmpty || _startDate == null || _endDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please select dates and at least one destination.')),
       );
       return;
     }
+    if (Supabase.instance.client.auth.currentSession == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to complete your booking.')),
+      );
+      return;
+    }
     setState(() => _isProcessing = true);
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) setState(() { _isProcessing = false; _bookingSuccess = true; });
-    });
+    try {
+      final result = await ApiService.createBooking({
+        'destinationIds': [],
+        'guestCount': _guestCount,
+        'startDate': _startDate!.toIso8601String().substring(0, 10),
+        'endDate': _endDate!.toIso8601String().substring(0, 10),
+        'totalAmount': _grandTotal,
+        'accommodationType': _accommodationId,
+        'transportType': _transportId,
+      });
+      final ref = (result['booking'] as Map<String, dynamic>)['reference_code'] as String? ?? 'CEB-ERROR';
+      if (mounted) setState(() { _isProcessing = false; _bookingRef = ref; _bookingSuccess = true; });
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Booking failed: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   @override
@@ -187,12 +213,12 @@ class _BookingScreenState extends State<BookingScreen> {
                     color: const Color(0xFFE0F7FA),
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  child: const Column(children: [
-                    Text('Booking Reference',
+                  child: Column(children: [
+                    const Text('Booking Reference',
                         style: TextStyle(color: Color(0xFF006994), fontWeight: FontWeight.bold)),
-                    SizedBox(height: 8),
-                    Text('CEB-88X9Z',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF00BCD4))),
+                    const SizedBox(height: 8),
+                    Text(_bookingRef,
+                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF00BCD4))),
                   ]),
                 ),
                 const SizedBox(height: 20),
