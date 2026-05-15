@@ -45,10 +45,14 @@ class _AdminScreenState extends State<AdminScreen> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F8),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: LayoutBuilder(
+        builder: (context, viewConstraints) => SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: viewConstraints.maxHeight),
+            child: IntrinsicHeight(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
             // ── Header ────────────────────────────────────────────────────
             Container(
               color: Colors.white,
@@ -112,7 +116,7 @@ class _AdminScreenState extends State<AdminScreen> {
             ),
 
             // ── Body ──────────────────────────────────────────────────────
-            LayoutBuilder(builder: (ctx, constraints) {
+            Expanded(child: LayoutBuilder(builder: (ctx, constraints) {
               final mobile = constraints.maxWidth < 700;
               if (mobile) {
                 return Padding(
@@ -239,10 +243,13 @@ class _AdminScreenState extends State<AdminScreen> {
                   ],
                 ),
               );
-            }),
+            })),
 
             const SpoonyFooter(),
-          ],
+                ],
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -873,8 +880,24 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
         const SizedBox(height: 20),
         if (_loading)
           const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
-        else if (_error != null && _spots.isEmpty)
-          _AdminEmpty(message: _error!)
+        else if (_error != null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFFFB74D)),
+            ),
+            child: Row(children: [
+              const Icon(Icons.wifi_off, size: 16, color: Color(0xFFF57C00)),
+              const SizedBox(width: 8),
+              const Expanded(child: Text(
+                'Backend offline — showing built-in destinations. Fix Render DATABASE_URL to enable editing.',
+                style: TextStyle(fontSize: 12, color: Color(0xFFF57C00)),
+              )),
+            ]),
+          )
         else if (all.isEmpty)
           const _AdminEmpty(message: 'No spots yet. Click "Add Spot" to create one.')
         else
