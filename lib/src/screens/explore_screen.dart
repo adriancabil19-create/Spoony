@@ -41,8 +41,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
         child: Column(
           children: [
             SpoonyNavBar(current: 'explore'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
+            LayoutBuilder(builder: (context, constraints) => Padding(
+              padding: EdgeInsets.symmetric(
+                  horizontal: constraints.maxWidth < 700 ? 16 : 48, vertical: 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -121,21 +122,27 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                 style: TextStyle(color: Color(0xFF8B99A6), fontSize: 16)),
                           ),
                         )
-                      : GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            mainAxisSpacing: 24,
-                            crossAxisSpacing: 24,
-                            childAspectRatio: 0.75,
-                          ),
-                          itemCount: _filtered.length,
-                          itemBuilder: (context, i) => _DestinationGridCard(spot: _filtered[i]),
+                      : LayoutBuilder(
+                          builder: (context, constraints) {
+                            final cols = constraints.maxWidth < 500 ? 1
+                                : constraints.maxWidth < 900 ? 2 : 4;
+                            return GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: cols,
+                                mainAxisSpacing: 20,
+                                crossAxisSpacing: 20,
+                                childAspectRatio: cols == 1 ? 1.6 : 0.75,
+                              ),
+                              itemCount: _filtered.length,
+                              itemBuilder: (context, i) => _DestinationGridCard(spot: _filtered[i]),
+                            );
+                          },
                         ),
                 ],
               ),
-            ),
+            )),
             const SizedBox(height: 48),
             const SpoonyFooter(),
           ],

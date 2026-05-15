@@ -46,49 +46,116 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: Column(
           children: [
             SpoonyNavBar(current: 'dashboard'),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Sidebar
-                  SizedBox(
-                    width: 280,
-                    child: Container(
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFE8EDEF)),
+            LayoutBuilder(builder: (ctx, constraints) {
+              final mobile = constraints.maxWidth < 700;
+              if (mobile) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  child: Column(children: [
+                    // Mobile: avatar + name row
+                    Row(children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: const Color(0xFFE0F7FA),
+                        child: Text(initials,
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF006994))),
                       ),
-                      child: Column(
-                        children: [
+                      const SizedBox(width: 14),
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                        const Text('Member', style: TextStyle(fontSize: 12, color: Color(0xFF8B99A6))),
+                      ]),
+                      const Spacer(),
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          await Supabase.instance.client.auth.signOut();
+                          if (context.mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                        },
+                        icon: const Icon(Icons.logout, size: 14),
+                        label: const Text('Out', style: TextStyle(fontSize: 12)),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFFFF6B4A)),
+                          foregroundColor: const Color(0xFFFF6B4A),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 16),
+                    // Horizontal tab bar
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: List.generate(_tabs.length, (i) {
+                          final (icon, label) = _tabs[i];
+                          final sel = _selectedTab == i;
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: GestureDetector(
+                              onTap: () => setState(() => _selectedTab = i),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: sel ? const Color(0xFFE0F7FA) : Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                      color: sel ? const Color(0xFF00BCD4) : const Color(0xFFE8EDEF)),
+                                ),
+                                child: Row(children: [
+                                  Icon(icon, size: 16,
+                                      color: sel ? const Color(0xFF006994) : const Color(0xFF8B99A6)),
+                                  const SizedBox(width: 6),
+                                  Text(label,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                                        color: sel ? const Color(0xFF006994) : const Color(0xFF8B99A6),
+                                      )),
+                                ]),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildContent(user),
+                  ]),
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 280,
+                      child: Container(
+                        padding: const EdgeInsets.all(24),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE8EDEF)),
+                        ),
+                        child: Column(children: [
                           CircleAvatar(
                             radius: 48,
                             backgroundColor: const Color(0xFFE0F7FA),
                             child: Text(initials,
-                                style: const TextStyle(
-                                    fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF006994))),
+                                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF006994))),
                           ),
                           const SizedBox(height: 16),
-                          Text(name,
-                              style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                          Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
                           const SizedBox(height: 4),
-                          const Text('Member',
-                              style: TextStyle(
-                                  fontSize: 12, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
+                          const Text('Member', style: TextStyle(fontSize: 12, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
                           const SizedBox(height: 24),
                           ...List.generate(_tabs.length, (i) {
                             final (icon, label) = _tabs[i];
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8),
-                              child: _MenuItem(
-                                icon: icon,
-                                label: label,
-                                selected: _selectedTab == i,
-                                onTap: () => setState(() => _selectedTab = i),
-                              ),
+                              child: _MenuItem(icon: icon, label: label,
+                                  selected: _selectedTab == i,
+                                  onTap: () => setState(() => _selectedTab = i)),
                             );
                           }),
                           const SizedBox(height: 16),
@@ -97,9 +164,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: OutlinedButton.icon(
                               onPressed: () async {
                                 await Supabase.instance.client.auth.signOut();
-                                if (context.mounted) {
-                                  Navigator.pushReplacementNamed(context, AuthScreen.routeName);
-                                }
+                                if (context.mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
                               },
                               icon: const Icon(Icons.logout, size: 18),
                               label: const Text('Sign Out'),
@@ -111,15 +176,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                           ),
-                        ],
+                        ]),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 32),
-                  Expanded(child: _buildContent(user)),
-                ],
-              ),
-            ),
+                    const SizedBox(width: 32),
+                    Expanded(child: _buildContent(user)),
+                  ],
+                ),
+              );
+            }),
             const SizedBox(height: 48),
             const SpoonyFooter(),
           ],
