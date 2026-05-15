@@ -5,6 +5,7 @@ const pool = new Pool({
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   max: 10,
   idleTimeoutMillis: 30000,
+  family: 4,
 });
 
 pool.on('error', (err) => {
