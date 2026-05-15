@@ -46,7 +46,7 @@ router.post(
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
          RETURNING *`,
         [
-          req.user.id, tourId || null, destinationIds || [], accommodationType,
+          req.user.id, /^[0-9a-f-]{36}$/i.test(tourId) ? tourId : null, destinationIds || [], accommodationType,
           transportType, guestCount, startDate, endDate, totalAmount, ref, qrUrl,
         ],
       );
