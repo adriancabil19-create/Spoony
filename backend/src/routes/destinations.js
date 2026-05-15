@@ -23,7 +23,8 @@ router.get('/', async (req, res) => {
         : await pool.query('SELECT * FROM destinations WHERE is_available = TRUE ORDER BY rating DESC');
     }
     res.json({ destinations: result.rows });
-  } catch {
+  } catch (err) {
+    console.error('destinations GET:', err.message);
     res.status(500).json({ message: 'Could not fetch destinations.' });
   }
 });
