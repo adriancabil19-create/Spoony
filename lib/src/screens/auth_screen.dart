@@ -113,19 +113,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
     setState(() { _isLoading = true; _errorMessage = null; });
     try {
-      await Supabase.instance.client.auth.signUp(
+      final response = await Supabase.instance.client.auth.signUp(
         email: email,
         password: password,
         data: {'name': name},
       );
       if (!mounted) return;
-      setState(() {
-        _isSignUpMode = false;
-        _successMessage = 'Account created! Check your email to verify, then sign in.';
-        _passwordController.clear();
-        _confirmPasswordController.clear();
-        _nameController.clear();
-      });
+      if (response.session != null) {
+        // Email confirmation disabled — user is auto-confirmed; onAuthStateChange handles navigation
+      } else {
+        setState(() {
+          _isSignUpMode = false;
+          _successMessage = 'Account created! Check your email to verify, then sign in.';
+          _passwordController.clear();
+          _confirmPasswordController.clear();
+          _nameController.clear();
+        });
+      }
     } on AuthException catch (e) {
       setState(() => _errorMessage = e.message);
     } finally {
