@@ -136,18 +136,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Future<void> _signInWithGoogle() async {
     setState(() { _isLoading = true; _errorMessage = null; });
     try {
-      await Supabase.instance.client.auth.signInWithOAuth(OAuthProvider.google);
-    } on AuthException catch (e) {
-      setState(() => _errorMessage = e.message);
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _signInWithFacebook() async {
-    setState(() { _isLoading = true; _errorMessage = null; });
-    try {
-      await Supabase.instance.client.auth.signInWithOAuth(OAuthProvider.facebook);
+      await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'https://spoony.vercel.app',
+      );
     } on AuthException catch (e) {
       setState(() => _errorMessage = e.message);
     } finally {
@@ -380,17 +372,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           const SizedBox(height: 18),
           const Center(child: Text('or continue with', style: TextStyle(color: Colors.white70))),
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _SocialBtn(label: 'Google', icon: Icons.g_mobiledata, onTap: _signInWithGoogle),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _SocialBtn(label: 'Facebook', icon: Icons.facebook, onTap: _signInWithFacebook),
-              ),
-            ],
-          ),
+          _SocialBtn(label: 'Google', icon: Icons.g_mobiledata, onTap: _signInWithGoogle),
           const SizedBox(height: 20),
           GestureDetector(
             onTap: () => setState(() {
@@ -512,17 +494,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         const SizedBox(height: 18),
         const Center(child: Text('or sign up with', style: TextStyle(color: Colors.white70))),
         const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: _SocialBtn(label: 'Google', icon: Icons.g_mobiledata, onTap: _signInWithGoogle),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _SocialBtn(label: 'Facebook', icon: Icons.facebook, onTap: _signInWithFacebook),
-            ),
-          ],
-        ),
+        _SocialBtn(label: 'Google', icon: Icons.g_mobiledata, onTap: _signInWithGoogle),
         const SizedBox(height: 20),
         GestureDetector(
           onTap: () => setState(() {
