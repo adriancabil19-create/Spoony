@@ -3,7 +3,6 @@ import '../models.dart';
 import '../data/cebu_data.dart';
 import 'home_screen.dart';
 import 'booking_screen.dart';
-import 'dashboard_screen.dart';
 
 class ExploreScreen extends StatefulWidget {
   static const routeName = '/explore';
@@ -41,7 +40,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _NavBar(current: 'explore'),
+            SpoonyNavBar(current: 'explore'),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
               child: Column(
@@ -138,7 +137,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ),
             ),
             const SizedBox(height: 48),
-            _Footer(),
+            const SpoonyFooter(),
           ],
         ),
       ),
@@ -261,129 +260,3 @@ class _DestinationGridCard extends StatelessWidget {
   }
 }
 
-// Reuse shared widgets from home_screen.dart
-class _NavBar extends StatelessWidget {
-  final String current;
-  const _NavBar({required this.current});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Row(children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: Color(0xFF00BCD4),
-              child: Icon(Icons.public, color: Colors.white, size: 18),
-            ),
-            SizedBox(width: 8),
-            Text('Spoony Travel',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF006994))),
-          ]),
-          Row(children: [
-            _NavBtn(label: 'Home', active: current == 'home',
-                onTap: () => Navigator.pushReplacementNamed(context, HomeScreen.routeName)),
-            _NavBtn(label: 'Explore', active: current == 'explore', onTap: () {}),
-            _NavBtn(label: 'Bookings', active: current == 'booking',
-                onTap: () => Navigator.pushNamed(context, BookingScreen.routeName)),
-            _NavBtn(label: 'Dashboard', active: current == 'dashboard',
-                onTap: () => Navigator.pushNamed(context, DashboardScreen.routeName)),
-            const SizedBox(width: 16),
-            FilledButton(
-              onPressed: () {},
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF00BCD4),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text('Sign In', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-            ),
-          ]),
-        ],
-      ),
-    );
-  }
-}
-
-class _NavBtn extends StatelessWidget {
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-  const _NavBtn({required this.label, required this.active, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextButton(
-      onPressed: onTap,
-      child: Text(label,
-          style: TextStyle(
-            color: active ? const Color(0xFF006994) : const Color(0xFF5D6D7A),
-            fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-          )),
-    );
-  }
-}
-
-class _Footer extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(children: [
-      Container(
-        color: const Color(0xFF006994),
-        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              flex: 2,
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Row(children: [
-                  CircleAvatar(radius: 14, backgroundColor: Color(0xFF00BCD4),
-                      child: Icon(Icons.public, color: Colors.white, size: 14)),
-                  SizedBox(width: 8),
-                  Text('Spoony Travel',
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                ]),
-                const SizedBox(height: 16),
-                Text('Your premium gateway to the most beautiful destinations in Cebu, Philippines.',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13, height: 1.6)),
-              ]),
-            ),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Destinations',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 12),
-                for (final l in ['Cebu City', 'South Cebu', 'North Cebu', 'Bohol Side Tours'])
-                  Padding(padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(l, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13))),
-              ]),
-            ),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('Support',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                const SizedBox(height: 12),
-                for (final l in ['Contact Us', 'FAQs', 'Privacy Policy', 'Terms of Service'])
-                  Padding(padding: const EdgeInsets.only(bottom: 8),
-                      child: Text(l, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13))),
-              ]),
-            ),
-          ],
-        ),
-      ),
-      Container(
-        color: const Color(0xFF00507A),
-        padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-        child: Center(
-          child: Text('© 2026 Spoony Travel and Tours. All rights reserved.',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
-        ),
-      ),
-    ]);
-  }
-}

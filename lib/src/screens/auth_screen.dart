@@ -80,13 +80,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       // Navigation handled by onAuthStateChange listener
     } on AuthException catch (e) {
       setState(() => _errorMessage = e.message);
-    } catch (_) {
-      // Offline/dev fallback — navigate directly without credentials
-      if (!mounted) return;
-      Navigator.pushReplacementNamed(
-        context,
-        _isAdminMode ? AdminScreen.routeName : HomeScreen.routeName,
-      );
+    } catch (e) {
+      setState(() => _errorMessage = 'Unexpected error. Please try again.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
