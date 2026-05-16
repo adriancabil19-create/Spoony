@@ -1,9 +1,10 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/cebu_data.dart';
 import '../models.dart';
-import '../services/api_service.dart';
 
 class BookingScreen extends StatefulWidget {
   static const routeName = '/booking';
@@ -84,9 +85,17 @@ class _BookingScreenState extends State<BookingScreen> {
     });
   }
 
+  String _generateRef() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final rng = Random();
+    final code = List.generate(5, (_) => chars[rng.nextInt(chars.length)]).join();
+    return 'CEB-$code';
+  }
+
   Future<void> _completeBooking() async {
     if (_pkg == null || _startDate == null || _endDate == null) return;
-    if (Supabase.instance.client.auth.currentSession == null) {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please sign in to complete your booking.')),
       );
@@ -94,24 +103,27 @@ class _BookingScreenState extends State<BookingScreen> {
     }
     setState(() => _isProcessing = true);
     try {
-      final result = await ApiService.createBooking({
-        'destinationIds': [],
-        'guestCount': _guestCount,
-        'startDate': _startDate!.toIso8601String().substring(0, 10),
-        'endDate': _endDate!.toIso8601String().substring(0, 10),
-        'totalAmount': _grandTotal,
-        'accommodationType': _accommodationId,
-        'transportType': _transportId,
-        'tourId': _packageId,
-      });
-      final ref =
-          (result['booking'] as Map<String, dynamic>)['reference_code'] as String? ?? 'CEB-ERROR';
-      if (mounted) setState(() { _isProcessing = false; _bookingRef = ref; _bookingSuccess = true; });
+      final ref = _generateRef();
+      final data = await Supabase.instance.client.from('bookings').insert({
+        'user_id': user.id,
+        'user_email': user.email ?? '',
+        'tour_id': _packageId,
+        'destination_ids': [],
+        'guest_count': _guestCount,
+        'start_date': _startDate!.toIso8601String().substring(0, 10),
+        'end_date': _endDate!.toIso8601String().substring(0, 10),
+        'total_amount': _grandTotal,
+        'accommodation_type': _accommodationId,
+        'transport_type': _transportId,
+        'reference_code': ref,
+        'status': 'pending',
+      }).select().single();
+      final bookingRef = (data['reference_code'] as String?) ?? ref;
+      if (mounted) setState(() { _isProcessing = false; _bookingRef = bookingRef; _bookingSuccess = true; });
     } catch (e) {
       if (mounted) {
         setState(() => _isProcessing = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Booking failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Booking failed: $e')));
       }
     }
   }

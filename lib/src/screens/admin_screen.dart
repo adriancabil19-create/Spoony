@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../services/api_service.dart';
 import '../data/cebu_data.dart';
 import 'home_screen.dart';
 import 'auth_screen.dart';
@@ -289,9 +288,12 @@ class _BookingsTabState extends State<_BookingsTab> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final result = await ApiService.getAllBookings();
+      final data = await Supabase.instance.client
+          .from('bookings')
+          .select()
+          .order('created_at', ascending: false);
       setState(() {
-        _bookings = (result['bookings'] as List).cast<Map<String, dynamic>>();
+        _bookings = (data as List).cast<Map<String, dynamic>>();
         _loading = false;
       });
     } catch (e) {
@@ -301,7 +303,11 @@ class _BookingsTabState extends State<_BookingsTab> {
 
   Future<void> _approve(String id) async {
     try {
-      await ApiService.approveBooking(id);
+      await Supabase.instance.client
+          .from('bookings')
+          .update({'status': 'confirmed', 'updated_at': DateTime.now().toIso8601String()})
+          .eq('id', id)
+          .eq('status', 'pending');
       _load();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -310,7 +316,10 @@ class _BookingsTabState extends State<_BookingsTab> {
 
   Future<void> _reject(String id) async {
     try {
-      await ApiService.rejectBooking(id);
+      await Supabase.instance.client
+          .from('bookings')
+          .update({'status': 'cancelled', 'updated_at': DateTime.now().toIso8601String()})
+          .eq('id', id);
       _load();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -615,8 +624,11 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final result = await ApiService.getAllDestinations();
-      final dbSpots = (result['destinations'] as List).cast<Map<String, dynamic>>();
+      final data = await Supabase.instance.client
+          .from('destinations')
+          .select()
+          .order('rating', ascending: false);
+      final dbSpots = (data as List).cast<Map<String, dynamic>>();
       setState(() { _spots = dbSpots; _loading = false; });
     } catch (e) {
       setState(() { _error = e.toString(); _loading = false; });
@@ -653,7 +665,10 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
     }
     final current = spot['is_available'] as bool? ?? true;
     try {
-      await ApiService.updateDestination(spot['id'] as String, {'isAvailable': !current});
+      await Supabase.instance.client
+          .from('destinations')
+          .update({'is_available': !current})
+          .eq('id', spot['id'] as String);
       _load();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -788,19 +803,24 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
                       }
                       setDlg(() { saving = true; errorMsg = null; });
                       try {
-                        final data = {
+                        final payload = {
                           'name': nameCtrl.text.trim(),
                           'description': descCtrl.text.trim(),
                           'region': region,
-                          'entranceFee': double.tryParse(feeCtrl.text) ?? 0,
+                          'entrance_fee': double.tryParse(feeCtrl.text) ?? 0,
                           'latitude': double.tryParse(latCtrl.text) ?? 10.3157,
                           'longitude': double.tryParse(lngCtrl.text) ?? 123.8854,
-                          'imageUrls': imgCtrl.text.trim().isNotEmpty ? [imgCtrl.text.trim()] : [],
+                          'image_urls': imgCtrl.text.trim().isNotEmpty ? [imgCtrl.text.trim()] : [],
                         };
                         if (isEdit) {
-                          await ApiService.updateDestination(existing['id'] as String, data);
+                          await Supabase.instance.client
+                              .from('destinations')
+                              .update(payload)
+                              .eq('id', existing['id'] as String);
                         } else {
-                          await ApiService.addDestination(data);
+                          await Supabase.instance.client
+                              .from('destinations')
+                              .insert(payload);
                         }
                         if (ctx.mounted) Navigator.pop(ctx);
                         _load();
@@ -839,7 +859,10 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
     );
     if (confirm != true) return;
     try {
-      await ApiService.delete('/destinations/${spot['id']}');
+      await Supabase.instance.client
+          .from('destinations')
+          .delete()
+          .eq('id', spot['id'] as String);
       _load();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
@@ -893,7 +916,7 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
               const Icon(Icons.wifi_off, size: 16, color: Color(0xFFF57C00)),
               const SizedBox(width: 8),
               const Expanded(child: Text(
-                'Backend offline — showing built-in destinations. Fix Render DATABASE_URL to enable editing.',
+                'Could not reach Supabase — showing built-in destinations. Check your Supabase connection.',
                 style: TextStyle(fontSize: 12, color: Color(0xFFF57C00)),
               )),
             ]),
