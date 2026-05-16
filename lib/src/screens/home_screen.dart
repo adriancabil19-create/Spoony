@@ -102,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisCount: mobile ? 1 : 3,
                           mainAxisSpacing: 24,
                           crossAxisSpacing: 24,
-                          childAspectRatio: mobile ? 1.5 : 0.78,
+                          childAspectRatio: mobile ? 2.2 : 1.1,
                         ),
                         itemCount: popular.length,
                         itemBuilder: (context, i) => _DestCard(spot: popular[i]),
