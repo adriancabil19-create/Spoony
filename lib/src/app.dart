@@ -17,28 +17,28 @@ class SpoonyApp extends StatelessWidget {
           title: 'Spoony Cebu Travel',
           theme: ThemeData(
             brightness: Brightness.light,
-            primaryColor: const Color(0xFF006994),
+            primaryColor: const Color(0xFF0EA5E9),
             colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF00BCD4),
-              primary: const Color(0xFF006994),
-              secondary: const Color(0xFF50C878),
+              seedColor: const Color(0xFF0EA5E9),
+              primary: const Color(0xFF0EA5E9),
+              secondary: const Color(0xFF14B8A6),
             ),
-            scaffoldBackgroundColor: const Color(0xFFF4FBFF),
+            scaffoldBackgroundColor: const Color(0xFFF8FAFC),
             fontFamily: 'Inter',
             textTheme: ThemeData.light().textTheme.copyWith(
                   headlineLarge: const TextStyle(
                     fontSize: 34,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF00314F),
+                    color: Color(0xFF0F172A),
                   ),
                   titleLarge: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF005A7C),
+                    color: Color(0xFF0EA5E9),
                   ),
                   bodyLarge: const TextStyle(
                     fontSize: 16,
-                    color: Color(0xFF314A5B),
+                    color: Color(0xFF64748B),
                   ),
                 ),
           ),

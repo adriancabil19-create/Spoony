@@ -9,268 +9,957 @@ import 'explore_screen.dart';
 import 'dashboard_screen.dart';
 import 'auth_screen.dart';
 
+// ── Color palette ─────────────────────────────────────────────────────────────
+const _kOcean = Color(0xFF0EA5E9);
+const _kTeal  = Color(0xFF14B8A6);
+const _kGold  = Color(0xFFF59E0B);
+const _kDark  = Color(0xFF0F172A);
+const _kMid   = Color(0xFF64748B);
+const _kBg    = Color(0xFFF8FAFC);
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+
 bool _isMobile(BuildContext context) => MediaQuery.of(context).size.width < 700;
 
-class HomeScreen extends StatelessWidget {
+// ── Home screen ───────────────────────────────────────────────────────────────
+
+class HomeScreen extends StatefulWidget {
   static const routeName = '/home';
   const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final _scrollCtrl = ScrollController();
+  bool _navScrolled = false;
+  bool _heroVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollCtrl.addListener(() {
+      final scrolled = _scrollCtrl.offset > 60;
+      if (scrolled != _navScrolled) setState(() => _navScrolled = scrolled);
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _heroVisible = true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final popular = cebuDestinations.take(3).toList();
     final mobile = _isMobile(context);
-    final hPad = mobile ? 16.0 : 48.0;
+    final hPad = mobile ? 20.0 : 80.0;
 
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            SpoonyNavBar(current: 'home'),
-            // Hero
-            Stack(
+      backgroundColor: _kBg,
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            controller: _scrollCtrl,
+            child: Column(
               children: [
-                Container(
-                  height: mobile ? 320 : 400,
-                  decoration: const BoxDecoration(
-                    image: DecorationImage(
-                      image: NetworkImage(
-                        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1200&q=80',
-                      ),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                Container(
-                  height: mobile ? 320 : 400,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF006994).withValues(alpha: 0.6),
-                        const Color(0xFF00BCD4).withValues(alpha: 0.4),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                ),
-                Positioned.fill(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: hPad, vertical: mobile ? 32 : 60),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Text(
-                          'Premium Cebu Island Experience',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Discover the\nMagic of Cebu',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: mobile ? 32 : 48,
-                            fontWeight: FontWeight.w800,
-                            height: 1.2,
-                          ),
-                        ),
-                        if (!mobile) ...[
-                          const SizedBox(height: 12),
-                          const SizedBox(
-                            width: 400,
-                            child: Text(
-                              'From the deep blue of Kawasan Falls to the peaks of Osmeña, book your dream itinerary with real-time distance tracking.',
-                              style: TextStyle(color: Colors.white, fontSize: 15, height: 1.6),
-                            ),
+                _HeroSection(visible: _heroVisible, mobile: mobile),
+                _StatsBar(mobile: mobile),
+                // ── Popular Destinations ──────────────────────────────────
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 60),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            const Text('Popular Destinations',
+                                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _kDark)),
+                            const SizedBox(height: 6),
+                            const Text('Discover the most highly-rated island spots across Cebu.',
+                                style: TextStyle(fontSize: 14, color: _kMid)),
+                          ]),
+                          TextButton.icon(
+                            onPressed: () => Navigator.pushNamed(context, ExploreScreen.routeName),
+                            icon: const Icon(Icons.arrow_forward, size: 16, color: _kOcean),
+                            label: const Text('View all',
+                                style: TextStyle(color: _kOcean, fontWeight: FontWeight.w600)),
                           ),
                         ],
-                        const SizedBox(height: 20),
-                        Wrap(
-                          spacing: 12,
-                          runSpacing: 10,
-                          children: [
-                            FilledButton(
-                              onPressed: () => Navigator.pushNamed(context, ExploreScreen.routeName),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: const Color(0xFF00BCD4),
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              ),
-                              child: const Text('Explore Destinations →',
-                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                            ),
-                            OutlinedButton(
-                              onPressed: () => Navigator.pushNamed(context, BookingScreen.routeName),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Colors.white70, width: 2),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                              ),
-                              child: const Text('Plan Itinerary',
-                                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                            ),
-                          ],
+                      ),
+                      const SizedBox(height: 32),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: mobile ? 1 : 3,
+                          mainAxisSpacing: 24,
+                          crossAxisSpacing: 24,
+                          childAspectRatio: mobile ? 1.5 : 0.78,
                         ),
-                      ],
-                    ),
+                        itemCount: popular.length,
+                        itemBuilder: (context, i) => _DestCard(spot: popular[i]),
+                      ),
+                    ],
                   ),
                 ),
+                _WhySection(mobile: mobile, hPad: hPad),
+                _TestimonialsSection(mobile: mobile, hPad: hPad),
+                const SpoonyFooter(),
               ],
             ),
-            const SizedBox(height: 24),
-            // Search bar
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: hPad),
-              child: mobile
-                  ? Column(children: [
-                      _searchField('Where to in Cebu?', Icons.location_on),
-                      const SizedBox(height: 10),
-                      _searchField('mm/dd/yyyy', Icons.calendar_today),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: () => Navigator.pushNamed(context, ExploreScreen.routeName),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF6B4A),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text('Search →',
-                              style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
-                        ),
-                      ),
-                    ])
-                  : Row(children: [
-                      Expanded(child: _searchField('Where to in Cebu?', Icons.location_on)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _searchField('mm/dd/yyyy', Icons.calendar_today)),
-                      const SizedBox(width: 12),
-                      FilledButton(
-                        onPressed: () => Navigator.pushNamed(context, ExploreScreen.routeName),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF6B4A),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text('Search →',
-                            style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white)),
-                      ),
-                    ]),
-            ),
-            const SizedBox(height: 48),
-            // Popular Destinations
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: hPad),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Popular Destinations',
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
-                      TextButton(
-                        onPressed: () => Navigator.pushNamed(context, ExploreScreen.routeName),
-                        child: const Text('View all →',
-                            style: TextStyle(color: Color(0xFF00BCD4), fontWeight: FontWeight.w600)),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Discover the most highly-rated island spots across Cebu.',
-                    style: TextStyle(color: Color(0xFF8B99A6), fontSize: 13),
-                  ),
-                  const SizedBox(height: 20),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: mobile ? 1 : 3,
-                      mainAxisSpacing: 20,
-                      crossAxisSpacing: 20,
-                      childAspectRatio: mobile ? 1.4 : 0.85,
-                    ),
-                    itemCount: popular.length,
-                    itemBuilder: (context, index) => _PopularDestinationCard(spot: popular[index]),
-                  ),
-                ],
+          ),
+          // Scroll-aware transparent navbar overlaid on top
+          Positioned(
+            top: 0, left: 0, right: 0,
+            child: _StickyNav(scrolled: _navScrolled),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Scroll-aware sticky nav ───────────────────────────────────────────────────
+
+class _StickyNav extends StatefulWidget {
+  final bool scrolled;
+  const _StickyNav({required this.scrolled});
+
+  @override
+  State<_StickyNav> createState() => _StickyNavState();
+}
+
+class _StickyNavState extends State<_StickyNav> {
+  User? _user;
+  late final StreamSubscription<AuthState> _sub;
+
+  @override
+  void initState() {
+    super.initState();
+    _user = Supabase.instance.client.auth.currentUser;
+    _sub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (mounted) setState(() => _user = data.session?.user);
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub.cancel();
+    super.dispose();
+  }
+
+  String _initials(User user) {
+    final raw = user.userMetadata?['name'] as String? ??
+        user.userMetadata?['full_name'] as String? ??
+        user.email ?? '';
+    final parts = raw.trim().split(' ');
+    return parts.map((p) => p.isNotEmpty ? p[0].toUpperCase() : '').take(2).join();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mobile = _isMobile(context);
+    final scrolled = widget.scrolled;
+    final textColor = scrolled ? _kDark : Colors.white;
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 250),
+      decoration: BoxDecoration(
+        color: scrolled ? Colors.white : Colors.transparent,
+        boxShadow: scrolled
+            ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 2))]
+            : [],
+      ),
+      padding: EdgeInsets.symmetric(horizontal: mobile ? 20 : 80, vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pushReplacementNamed(context, HomeScreen.routeName),
+            child: Row(children: [
+              Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [_kOcean, _kTeal]),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.public, color: Colors.white, size: 18),
               ),
-            ),
-            const SizedBox(height: 48),
-            // Why Book With Us
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: hPad),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Center(
-                    child: Text('Why Book With Us?',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
-                  ),
-                  const SizedBox(height: 8),
-                  const Center(
-                    child: Text(
-                      'Experience the smartest way to book across Cebu. Our premium platform ensures your journey is seamless.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFF8B99A6), fontSize: 13, height: 1.6),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  GridView(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: mobile ? 1 : 3,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      childAspectRatio: mobile ? 2.5 : 1.1,
-                    ),
-                    children: const [
-                      _FeatureCard(icon: Icons.flight_takeoff, title: 'Smart Itinerary & Routing', description: 'Optimize destination order, distance and schedule for your Cebu adventures.'),
-                      _FeatureCard(icon: Icons.shield_rounded, title: 'Secure Premium Booking', description: 'Verified partners, payment tracking, and 24/7 dedicated support team.'),
-                      _FeatureCard(icon: Icons.eco, title: 'Curated Local Experiences', description: 'Handpicked spots, hidden gems, and exclusive tours across all of Cebu.'),
-                    ],
-                  ),
-                ],
+              const SizedBox(width: 10),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 250),
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: textColor),
+                child: const Text('Spoony Travel'),
               ),
-            ),
-            const SizedBox(height: 56),
-            const SpoonyFooter(),
-          ],
-        ),
+            ]),
+          ),
+          if (mobile)
+            IconButton(
+              icon: Icon(Icons.menu, color: textColor, size: 28),
+              onPressed: () => _showMobileMenu(context),
+            )
+          else
+            Row(children: [
+              _NavLink(label: 'Home', textColor: textColor, active: true,
+                  onTap: () => Navigator.pushReplacementNamed(context, HomeScreen.routeName)),
+              _NavLink(label: 'Explore', textColor: textColor, active: false,
+                  onTap: () => Navigator.pushNamed(context, ExploreScreen.routeName)),
+              _NavLink(label: 'Bookings', textColor: textColor, active: false,
+                  onTap: () => Navigator.pushNamed(context, BookingScreen.routeName)),
+              _NavLink(label: 'Dashboard', textColor: textColor, active: false,
+                  onTap: () => Navigator.pushNamed(context, DashboardScreen.routeName)),
+              const SizedBox(width: 20),
+              if (_user != null) ...[
+                CircleAvatar(
+                  radius: 16, backgroundColor: _kOcean,
+                  child: Text(_initials(_user!),
+                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: () async {
+                    await Supabase.instance.client.auth.signOut();
+                    if (context.mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                  },
+                  icon: const Icon(Icons.logout, size: 15),
+                  label: const Text('Sign Out'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFEF4444),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ] else
+                FilledButton(
+                  onPressed: () => Navigator.pushReplacementNamed(context, AuthScreen.routeName),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _kGold,
+                    foregroundColor: _kDark,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: const Text('Sign In', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                ),
+            ]),
+        ],
       ),
     );
   }
 
-  Widget _searchField(String hint, IconData icon) {
-    return TextField(
-      decoration: InputDecoration(
-        hintText: hint,
-        prefixIcon: Icon(icon, color: const Color(0xFF00BCD4)),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
+  void _showMobileMenu(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+              ),
+              if (_user != null) ...[
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(children: [
+                    CircleAvatar(
+                      radius: 20, backgroundColor: _kOcean,
+                      child: Text(_initials(_user!),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(
+                      _user!.userMetadata?['name'] as String? ??
+                          _user!.userMetadata?['full_name'] as String? ??
+                          _user!.email ?? '',
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                    )),
+                  ]),
+                ),
+                const Divider(),
+              ],
+              _MobileNavItem(label: 'Home', icon: Icons.home_outlined, active: true,
+                  onTap: () { Navigator.pop(context); Navigator.pushReplacementNamed(context, HomeScreen.routeName); }),
+              _MobileNavItem(label: 'Explore', icon: Icons.explore_outlined, active: false,
+                  onTap: () { Navigator.pop(context); Navigator.pushNamed(context, ExploreScreen.routeName); }),
+              _MobileNavItem(label: 'Bookings', icon: Icons.book_outlined, active: false,
+                  onTap: () { Navigator.pop(context); Navigator.pushNamed(context, BookingScreen.routeName); }),
+              _MobileNavItem(label: 'Dashboard', icon: Icons.dashboard_outlined, active: false,
+                  onTap: () { Navigator.pop(context); Navigator.pushNamed(context, DashboardScreen.routeName); }),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: _user != null
+                    ? SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () async {
+                            Navigator.pop(context);
+                            await Supabase.instance.client.auth.signOut();
+                            if (context.mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                          },
+                          icon: const Icon(Icons.logout, size: 16),
+                          label: const Text('Sign Out'),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFFEF4444),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      )
+                    : SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _kGold,
+                            foregroundColor: _kDark,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('Sign In', style: TextStyle(fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// ── Shared nav bar ────────────────────────────────────────────────────────────
+class _NavLink extends StatefulWidget {
+  final String label;
+  final Color textColor;
+  final bool active;
+  final VoidCallback onTap;
+  const _NavLink({required this.label, required this.textColor, required this.active, required this.onTap});
+
+  @override
+  State<_NavLink> createState() => _NavLinkState();
+}
+
+class _NavLinkState extends State<_NavLink> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 150),
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: widget.active || _hovered ? FontWeight.w700 : FontWeight.w500,
+              color: _hovered ? _kOcean : widget.textColor,
+            ),
+            child: Text(widget.label),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Cinematic hero ────────────────────────────────────────────────────────────
+
+class _HeroSection extends StatelessWidget {
+  final bool visible;
+  final bool mobile;
+  const _HeroSection({required this.visible, required this.mobile});
+
+  @override
+  Widget build(BuildContext context) {
+    final heroH = mobile ? 520.0 : 640.0;
+    final hPad = mobile ? 24.0 : 80.0;
+
+    return Stack(
+      children: [
+        SizedBox(
+          height: heroH,
+          width: double.infinity,
+          child: Image.network(
+            'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1600&q=80',
+            fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => Container(color: _kOcean),
+          ),
+        ),
+        Container(
+          height: heroH,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                _kDark.withValues(alpha: 0.78),
+                _kOcean.withValues(alpha: 0.30),
+              ],
+              begin: Alignment.bottomLeft,
+              end: Alignment.topRight,
+            ),
+          ),
+        ),
+        SizedBox(
+          height: heroH,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(hPad, mobile ? 90 : 100, hPad, 40),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AnimatedOpacity(
+                  opacity: visible ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 800),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _kGold.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: _kGold.withValues(alpha: 0.55)),
+                        ),
+                        child: const Text('✦  Premium Cebu Island Experience',
+                            style: TextStyle(color: _kGold, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.6)),
+                      ),
+                      SizedBox(height: mobile ? 18 : 26),
+                      Text(
+                        'Discover the\nMagic of Cebu',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: mobile ? 38 : 58,
+                          fontWeight: FontWeight.w900,
+                          height: 1.12,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      if (!mobile) ...[
+                        const SizedBox(height: 18),
+                        const SizedBox(
+                          width: 520,
+                          child: Text(
+                            'From the deep blue of Kawasan Falls to the peaks of Osmeña, book your dream itinerary with real-time distance tracking.',
+                            style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.7),
+                          ),
+                        ),
+                      ],
+                      SizedBox(height: mobile ? 28 : 40),
+                      Wrap(
+                        spacing: 14,
+                        runSpacing: 12,
+                        children: [
+                          _HeroCta(
+                            label: 'Explore Destinations',
+                            icon: Icons.explore_rounded,
+                            primary: true,
+                            onTap: () => Navigator.pushNamed(context, ExploreScreen.routeName),
+                          ),
+                          _HeroCta(
+                            label: 'Plan Itinerary',
+                            icon: Icons.calendar_month_rounded,
+                            primary: false,
+                            onTap: () => Navigator.pushNamed(context, BookingScreen.routeName),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroCta extends StatefulWidget {
+  final String label;
+  final IconData icon;
+  final bool primary;
+  final VoidCallback onTap;
+  const _HeroCta({required this.label, required this.icon, required this.primary, required this.onTap});
+
+  @override
+  State<_HeroCta> createState() => _HeroCtaState();
+}
+
+class _HeroCtaState extends State<_HeroCta> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          transform: Matrix4.translationValues(0, _hovered ? -2 : 0, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 15),
+          decoration: BoxDecoration(
+            color: widget.primary
+                ? (_hovered ? _kGold : _kOcean)
+                : Colors.white.withValues(alpha: _hovered ? 0.22 : 0.12),
+            borderRadius: BorderRadius.circular(50),
+            border: widget.primary ? null : Border.all(color: Colors.white70, width: 1.5),
+            boxShadow: widget.primary && _hovered
+                ? [BoxShadow(color: _kOcean.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))]
+                : [],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(widget.icon, color: Colors.white, size: 16),
+              const SizedBox(width: 8),
+              Text(widget.label,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Stats bar ─────────────────────────────────────────────────────────────────
+
+class _StatsBar extends StatelessWidget {
+  final bool mobile;
+  const _StatsBar({required this.mobile});
+
+  static const _stats = [
+    ('50+', 'Destinations'),
+    ('1,200+', 'Happy Travelers'),
+    ('4.9★', 'Average Rating'),
+    ('24/7', 'Support'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _kDark,
+      padding: EdgeInsets.symmetric(vertical: 22, horizontal: mobile ? 20 : 80),
+      child: mobile
+          ? GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 3.5,
+              children: _stats.map((s) => _StatItem(value: s.$1, label: s.$2)).toList(),
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: _stats.map((s) => _StatItem(value: s.$1, label: s.$2)).toList(),
+            ),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final String value;
+  final String label;
+  const _StatItem({required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(value, style: const TextStyle(color: _kGold, fontSize: 22, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
+      ],
+    );
+  }
+}
+
+// ── Destination card with hover lift ─────────────────────────────────────────
+
+class _DestCard extends StatefulWidget {
+  final Destination spot;
+  const _DestCard({required this.spot});
+
+  @override
+  State<_DestCard> createState() => _DestCardState();
+}
+
+class _DestCardState extends State<_DestCard> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final spot = widget.spot;
+    final mobile = _isMobile(context);
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: () => Navigator.pushNamed(context, BookingScreen.routeName),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          transform: Matrix4.translationValues(0, _hovered ? -6 : 0, 0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: _hovered ? 0.12 : 0.06),
+                blurRadius: _hovered ? 24 : 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: mobile
+              ? Row(children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
+                    child: Image.network(
+                      spot.images.first,
+                      height: 100, width: 120, fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) => Container(
+                          height: 100, width: 120, color: const Color(0xFFE0F7FA),
+                          child: const Icon(Icons.image, color: _kOcean)),
+                    ),
+                  ),
+                  Expanded(child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(spot.name,
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 4),
+                      Text(regionTitle(spot.region),
+                          style: const TextStyle(fontSize: 11, color: _kMid)),
+                      const SizedBox(height: 6),
+                      Row(children: [
+                        const Icon(Icons.star, size: 12, color: _kGold),
+                        const SizedBox(width: 3),
+                        Text('${spot.rating}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kDark)),
+                        const Spacer(),
+                        Text('₱${spot.entranceFee.toInt()}',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kTeal)),
+                      ]),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () => Navigator.pushNamed(context, BookingScreen.routeName),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _kOcean,
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            minimumSize: const Size(0, 0),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          child: const Text('Book Now', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ]),
+                  )),
+                ])
+              : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                    child: Stack(children: [
+                      Image.network(
+                        spot.images.first,
+                        height: 180, width: double.infinity, fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Container(
+                            height: 180, color: const Color(0xFFE0F7FA),
+                            child: const Icon(Icons.image, color: _kOcean, size: 40)),
+                      ),
+                      Positioned(
+                        top: 10, left: 10,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: _kOcean,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(regionTitle(spot.region),
+                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ]),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(spot.name,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _kDark),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 4),
+                      Row(children: [
+                        const Icon(Icons.location_on, size: 12, color: _kMid),
+                        const SizedBox(width: 3),
+                        Expanded(child: Text(spot.description,
+                            style: const TextStyle(fontSize: 11, color: _kMid),
+                            maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      ]),
+                      const SizedBox(height: 10),
+                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                        Row(children: [
+                          const Icon(Icons.star, size: 14, color: _kGold),
+                          const SizedBox(width: 4),
+                          Text('${spot.rating}',
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark)),
+                        ]),
+                        Text('₱${spot.entranceFee.toInt()}',
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kTeal)),
+                      ]),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: () => Navigator.pushNamed(context, BookingScreen.routeName),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: _kOcean,
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('Book Now', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ]),
+                  ),
+                ]),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Why choose section ────────────────────────────────────────────────────────
+
+class _WhySection extends StatelessWidget {
+  final bool mobile;
+  final double hPad;
+  const _WhySection({required this.mobile, required this.hPad});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 60),
+      child: Column(
+        children: [
+          const Text('Why Choose Spoony?',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _kDark),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          const Text(
+            'The smartest way to explore Cebu — curated spots, real-time booking, and premium support.',
+            style: TextStyle(fontSize: 14, color: _kMid, height: 1.6),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 40),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: mobile ? 1 : 3,
+            mainAxisSpacing: 20,
+            crossAxisSpacing: 20,
+            childAspectRatio: mobile ? 3.2 : 1.2,
+            children: const [
+              _FeatureTile(
+                icon: Icons.route_rounded,
+                color: _kOcean,
+                title: 'Smart Itinerary',
+                desc: 'Optimized routes, distances, and schedules for your Cebu adventure.',
+              ),
+              _FeatureTile(
+                icon: Icons.shield_rounded,
+                color: _kTeal,
+                title: 'Secure Booking',
+                desc: 'Verified partners, transparent pricing, and 24/7 dedicated support.',
+              ),
+              _FeatureTile(
+                icon: Icons.eco_rounded,
+                color: _kGold,
+                title: 'Local Experiences',
+                desc: 'Handpicked hidden gems and exclusive tours across all of Cebu.',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FeatureTile extends StatefulWidget {
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String desc;
+  const _FeatureTile({required this.icon, required this.color, required this.title, required this.desc});
+
+  @override
+  State<_FeatureTile> createState() => _FeatureTileState();
+}
+
+class _FeatureTileState extends State<_FeatureTile> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        transform: Matrix4.translationValues(0, _hovered ? -4 : 0, 0),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: _hovered ? widget.color.withValues(alpha: 0.05) : _kBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: _hovered ? widget.color.withValues(alpha: 0.3) : const Color(0xFFE2E8F0),
+          ),
+        ),
+        child: Row(children: [
+          Container(
+            width: 48, height: 48,
+            decoration: BoxDecoration(
+              color: widget.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(widget.icon, color: widget.color, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(widget.title,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark)),
+            const SizedBox(height: 4),
+            Text(widget.desc,
+                style: const TextStyle(fontSize: 12, color: _kMid, height: 1.5),
+                maxLines: 2, overflow: TextOverflow.ellipsis),
+          ])),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── Testimonials section ──────────────────────────────────────────────────────
+
+class _TestimonialsSection extends StatelessWidget {
+  final bool mobile;
+  final double hPad;
+  const _TestimonialsSection({required this.mobile, required this.hPad});
+
+  static const _reviews = [
+    ('Maria Santos', 'Cebu City', 4.9, 'Spoony made our Cebu trip absolutely perfect! The booking was seamless and the destinations they suggested were hidden gems we never would have found on our own.'),
+    ('John Reyes', 'Manila', 5.0, 'Best travel platform for Cebu! The real-time itinerary planner saved us hours of planning. Kawasan Falls was breathtaking — everything was organized perfectly.'),
+    ('Ana Villanueva', 'Davao', 4.8, 'Wonderful experience! The team at Spoony was so helpful and responsive. Booked Osmeña Peak and Sardine Run in one go — it was incredible!'),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: _kBg,
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 60),
+      child: Column(
+        children: [
+          const Text('What Travelers Say',
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _kDark),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          const Text('Real reviews from people who explored Cebu with Spoony.',
+              style: TextStyle(fontSize: 14, color: _kMid), textAlign: TextAlign.center),
+          const SizedBox(height: 40),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: mobile ? 1 : 3,
+            mainAxisSpacing: 20,
+            crossAxisSpacing: 20,
+            childAspectRatio: mobile ? 2.0 : 0.88,
+            children: _reviews
+                .map((r) => _ReviewCard(name: r.$1, location: r.$2, rating: r.$3, review: r.$4))
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReviewCard extends StatelessWidget {
+  final String name;
+  final String location;
+  final double rating;
+  final String review;
+  const _ReviewCard({required this.name, required this.location, required this.rating, required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 4))],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          for (int i = 0; i < 5; i++)
+            Icon(Icons.star, size: 14,
+                color: i < rating.round() ? _kGold : const Color(0xFFE2E8F0)),
+          const SizedBox(width: 6),
+          Text(rating.toString(),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kDark)),
+        ]),
+        const SizedBox(height: 14),
+        Expanded(
+          child: Text('"$review"',
+              style: const TextStyle(fontSize: 13, color: _kMid, height: 1.6),
+              overflow: TextOverflow.fade),
+        ),
+        const SizedBox(height: 16),
+        Row(children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: _kOcean.withValues(alpha: 0.12),
+            child: Text(name[0],
+                style: const TextStyle(color: _kOcean, fontWeight: FontWeight.bold, fontSize: 14)),
+          ),
+          const SizedBox(width: 10),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark)),
+            Text(location, style: const TextStyle(fontSize: 11, color: _kMid)),
+          ]),
+        ]),
+      ]),
+    );
+  }
+}
+
+// ── Shared nav bar (used by Explore, Booking, Dashboard, Admin) ───────────────
 
 class SpoonyNavBar extends StatefulWidget {
   final String current;
@@ -311,7 +1000,7 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -321,17 +1010,14 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
               Container(
                 width: 40, height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
               ),
               if (_user != null) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   child: Row(children: [
                     CircleAvatar(
-                      radius: 20,
-                      backgroundColor: const Color(0xFF00BCD4),
+                      radius: 20, backgroundColor: _kOcean,
                       child: Text(_initials(_user!),
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
@@ -368,14 +1054,12 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
                           onPressed: () async {
                             Navigator.pop(context);
                             await Supabase.instance.client.auth.signOut();
-                            if (context.mounted) {
-                              Navigator.pushReplacementNamed(context, AuthScreen.routeName);
-                            }
+                            if (context.mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
                           },
                           icon: const Icon(Icons.logout, size: 16),
                           label: const Text('Sign Out'),
                           style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF6B4A),
+                            backgroundColor: const Color(0xFFEF4444),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -389,7 +1073,7 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
                             Navigator.pushReplacementNamed(context, AuthScreen.routeName);
                           },
                           style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF00BCD4),
+                            backgroundColor: _kOcean,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -410,26 +1094,32 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
     final mobile = _isMobile(context);
     return Container(
       color: Colors.white,
-      padding: EdgeInsets.symmetric(horizontal: mobile ? 16 : 24, vertical: 14),
+      padding: EdgeInsets.symmetric(horizontal: mobile ? 20 : 80, vertical: 14),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
             onTap: () => Navigator.pushReplacementNamed(context, HomeScreen.routeName),
-            child: const Row(children: [
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: Color(0xFF00BCD4),
-                child: Icon(Icons.public, color: Colors.white, size: 18),
+            child: Row(children: [
+              Container(
+                width: 32, height: 32,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [_kOcean, _kTeal]),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.public, color: Colors.white, size: 18),
               ),
-              SizedBox(width: 8),
-              Text('Spoony Travel',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF006994))),
+              const SizedBox(width: 10),
+              const Text('Spoony Travel',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _kDark)),
             ]),
           ),
           if (mobile)
             IconButton(
-              icon: const Icon(Icons.menu, color: Color(0xFF006994), size: 28),
+              icon: const Icon(Icons.menu, color: _kDark, size: 28),
               onPressed: () => _showMobileMenu(context),
             )
           else
@@ -442,11 +1132,10 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
                   onTap: () => Navigator.pushNamed(context, BookingScreen.routeName)),
               _NavBtn(label: 'Dashboard', active: widget.current == 'dashboard',
                   onTap: () => Navigator.pushNamed(context, DashboardScreen.routeName)),
-              const SizedBox(width: 16),
+              const SizedBox(width: 20),
               if (_user != null) ...[
                 CircleAvatar(
-                  radius: 16,
-                  backgroundColor: const Color(0xFF00BCD4),
+                  radius: 16, backgroundColor: _kOcean,
                   child: Text(_initials(_user!),
                       style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
@@ -454,14 +1143,12 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
                 FilledButton.icon(
                   onPressed: () async {
                     await Supabase.instance.client.auth.signOut();
-                    if (context.mounted) {
-                      Navigator.pushReplacementNamed(context, AuthScreen.routeName);
-                    }
+                    if (context.mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
                   },
-                  icon: const Icon(Icons.logout, size: 16),
+                  icon: const Icon(Icons.logout, size: 15),
                   label: const Text('Sign Out'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF6B4A),
+                    backgroundColor: const Color(0xFFEF4444),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
@@ -470,7 +1157,7 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
                 FilledButton(
                   onPressed: () => Navigator.pushReplacementNamed(context, AuthScreen.routeName),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF00BCD4),
+                    backgroundColor: _kOcean,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
@@ -483,6 +1170,101 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
   }
 }
 
+// ── Shared footer ─────────────────────────────────────────────────────────────
+
+class SpoonyFooter extends StatelessWidget {
+  const SpoonyFooter({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final mobile = _isMobile(context);
+    final hPad = mobile ? 20.0 : 80.0;
+
+    return Column(
+      children: [
+        Container(
+          color: _kDark,
+          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 44),
+          child: mobile
+              ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const _FooterBrand(),
+                  const SizedBox(height: 32),
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(child: _FooterLinks(title: 'Destinations', links: const ['Cebu City', 'South Cebu', 'North Cebu', 'Bohol'])),
+                    Expanded(child: _FooterLinks(title: 'Support', links: const ['Contact Us', 'FAQs', 'Privacy Policy', 'Terms'])),
+                  ]),
+                ])
+              : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Expanded(flex: 2, child: _FooterBrand()),
+                  Expanded(child: _FooterLinks(title: 'Destinations', links: const ['Cebu City', 'South Cebu', 'North Cebu', 'Bohol'])),
+                  Expanded(child: _FooterLinks(title: 'Support', links: const ['Contact Us', 'FAQs', 'Privacy Policy', 'Terms of Service'])),
+                ]),
+        ),
+        Container(
+          color: Colors.black,
+          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 16),
+          child: Center(
+            child: Text('© 2026 Spoony Travel and Tours. All rights reserved.',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 12)),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FooterBrand extends StatelessWidget {
+  const _FooterBrand();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        Container(
+          width: 32, height: 32,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [_kOcean, _kTeal]),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.public, color: Colors.white, size: 18),
+        ),
+        const SizedBox(width: 10),
+        const Text('Spoony Travel',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)),
+      ]),
+      const SizedBox(height: 16),
+      const SizedBox(
+        width: 240,
+        child: Text(
+          'Your premium gateway to the most beautiful destinations in Cebu, Philippines.',
+          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.6),
+        ),
+      ),
+    ]);
+  }
+}
+
+class _FooterLinks extends StatelessWidget {
+  final String title;
+  final List<String> links;
+  const _FooterLinks({required this.title, required this.links});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
+      const SizedBox(height: 16),
+      for (final l in links)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(l, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+        ),
+    ]);
+  }
+}
+
+// ── Shared private widgets ────────────────────────────────────────────────────
+
 class _MobileNavItem extends StatelessWidget {
   final String label;
   final IconData icon;
@@ -493,266 +1275,13 @@ class _MobileNavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: active ? const Color(0xFF006994) : const Color(0xFF8B99A6)),
+      leading: Icon(icon, color: active ? _kOcean : _kMid),
       title: Text(label,
           style: TextStyle(
               fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active ? const Color(0xFF006994) : const Color(0xFF5D6D7A))),
-      tileColor: active ? const Color(0xFFE0F7FA) : null,
+              color: active ? _kOcean : const Color(0xFF475569))),
+      tileColor: active ? _kOcean.withValues(alpha: 0.06) : null,
       onTap: onTap,
-    );
-  }
-}
-
-// ── Shared footer ─────────────────────────────────────────────────────────────
-
-class SpoonyFooter extends StatelessWidget {
-  const SpoonyFooter({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final mobile = _isMobile(context);
-    final hPad = mobile ? 20.0 : 48.0;
-
-    return Column(
-      children: [
-        Container(
-          color: const Color(0xFF006994),
-          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 32),
-          child: mobile
-              ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Row(children: [
-                    CircleAvatar(
-                      radius: 14, backgroundColor: Color(0xFF00BCD4),
-                      child: Icon(Icons.public, color: Colors.white, size: 14),
-                    ),
-                    SizedBox(width: 8),
-                    Text('Spoony Travel',
-                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                  ]),
-                  const SizedBox(height: 12),
-                  Text('Your premium gateway to the most beautiful destinations in Cebu, Philippines.',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13, height: 1.6)),
-                  const SizedBox(height: 24),
-                  const Text('Destinations',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
-                  const SizedBox(height: 8),
-                  for (final l in ['Cebu City', 'South Cebu', 'North Cebu', 'Bohol Side Tours'])
-                    Padding(padding: const EdgeInsets.only(bottom: 6),
-                        child: Text(l, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13))),
-                  const SizedBox(height: 16),
-                  const Text('Support',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white)),
-                  const SizedBox(height: 8),
-                  for (final l in ['Contact Us', 'FAQs', 'Privacy Policy', 'Terms of Service'])
-                    Padding(padding: const EdgeInsets.only(bottom: 6),
-                        child: Text(l, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13))),
-                ])
-              : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Expanded(
-                    flex: 2,
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Row(children: [
-                        CircleAvatar(radius: 14, backgroundColor: Color(0xFF00BCD4),
-                            child: Icon(Icons.public, color: Colors.white, size: 14)),
-                        SizedBox(width: 8),
-                        Text('Spoony Travel',
-                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                      ]),
-                      const SizedBox(height: 16),
-                      Text('Your premium gateway to the most beautiful destinations in Cebu, Philippines.',
-                          style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13, height: 1.6)),
-                    ]),
-                  ),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Destinations',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                      const SizedBox(height: 12),
-                      for (final l in ['Cebu City', 'South Cebu', 'North Cebu', 'Bohol Side Tours'])
-                        Padding(padding: const EdgeInsets.only(bottom: 8),
-                            child: Text(l, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13))),
-                    ]),
-                  ),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      const Text('Support',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
-                      const SizedBox(height: 12),
-                      for (final l in ['Contact Us', 'FAQs', 'Privacy Policy', 'Terms of Service'])
-                        Padding(padding: const EdgeInsets.only(bottom: 8),
-                            child: Text(l, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13))),
-                    ]),
-                  ),
-                ]),
-        ),
-        Container(
-          color: const Color(0xFF00507A),
-          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 14),
-          child: Center(
-            child: Text('© 2026 Spoony Travel and Tours. All rights reserved.',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Private widgets ───────────────────────────────────────────────────────────
-
-class _PopularDestinationCard extends StatelessWidget {
-  final Destination spot;
-  const _PopularDestinationCard({required this.spot});
-
-  @override
-  Widget build(BuildContext context) {
-    final mobile = _isMobile(context);
-    return GestureDetector(
-      onTap: () => Navigator.pushNamed(context, BookingScreen.routeName),
-      child: mobile
-          ? Row(children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: Image.network(
-                  spot.images.first,
-                  height: 90, width: 110,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => Container(
-                      height: 90, width: 110,
-                      color: const Color(0xFFE0F7FA),
-                      child: const Icon(Icons.image, color: Color(0xFF00BCD4))),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(spot.name,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF00314F)),
-                    maxLines: 1),
-                const SizedBox(height: 4),
-                Text(regionTitle(spot.region),
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6))),
-                const SizedBox(height: 6),
-                Row(children: [
-                  const Icon(Icons.star, size: 13, color: Color(0xFFFFC107)),
-                  const SizedBox(width: 4),
-                  Text('${spot.rating}',
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                  const Spacer(),
-                  Text('₱${spot.entranceFee.toInt()}',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF50C878))),
-                ]),
-                const SizedBox(height: 8),
-                FilledButton(
-                  onPressed: () => Navigator.pushNamed(context, BookingScreen.routeName),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF00BCD4),
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                    minimumSize: const Size(0, 0),
-                  ),
-                  child: const Text('Book Now', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-                ),
-              ])),
-            ])
-          : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Stack(children: [
-                  Image.network(
-                    spot.images.first,
-                    height: 160, width: double.infinity, fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Container(
-                        height: 160, color: const Color(0xFFE0F7FA),
-                        child: const Icon(Icons.image, color: Color(0xFF00BCD4), size: 40)),
-                  ),
-                  Positioned(top: 8, left: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF00BCD4), width: 1.5),
-                      ),
-                      child: Text(regionTitle(spot.region),
-                          style: const TextStyle(color: Color(0xFF006994), fontSize: 11, fontWeight: FontWeight.w700)),
-                    )),
-                ]),
-              ),
-              const SizedBox(height: 12),
-              Text(spot.name,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF00314F)),
-                  maxLines: 2),
-              const SizedBox(height: 4),
-              Row(children: [
-                const Icon(Icons.location_on, size: 14, color: Color(0xFF8B99A6)),
-                const SizedBox(width: 4),
-                Expanded(child: Text(spot.description,
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6)),
-                    maxLines: 1, overflow: TextOverflow.ellipsis)),
-              ]),
-              const SizedBox(height: 8),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Row(children: [
-                  const Icon(Icons.star, size: 16, color: Color(0xFFFFC107)),
-                  const SizedBox(width: 4),
-                  Text('${spot.rating}',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
-                ]),
-                Text('₱${spot.entranceFee.toInt()}',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF50C878))),
-              ]),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () => Navigator.pushNamed(context, BookingScreen.routeName),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF00BCD4),
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Text('Book Now', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-                ),
-              ),
-            ]),
-    );
-  }
-}
-
-class _FeatureCard extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
-  const _FeatureCard({required this.icon, required this.title, required this.description});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE8EDEF)),
-      ),
-      child: Row(children: [
-        Container(
-          width: 48, height: 48,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE8F4FF),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: const Color(0xFF00BCD4), size: 24),
-        ),
-        const SizedBox(width: 14),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
-          const SizedBox(height: 4),
-          Text(description,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6), height: 1.4),
-              maxLines: 2, overflow: TextOverflow.ellipsis),
-        ])),
-      ]),
     );
   }
 }
@@ -769,8 +1298,8 @@ class _NavBtn extends StatelessWidget {
       onPressed: onTap,
       child: Text(label,
           style: TextStyle(
-            color: active ? const Color(0xFF006994) : const Color(0xFF5D6D7A),
-            fontWeight: active ? FontWeight.w700 : FontWeight.w600,
+            color: active ? _kOcean : _kMid,
+            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
           )),
     );
   }
