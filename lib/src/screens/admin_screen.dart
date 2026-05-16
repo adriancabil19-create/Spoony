@@ -28,10 +28,23 @@ class AdminScreen extends StatefulWidget {
 class _AdminScreenState extends State<AdminScreen> {
   int _tab = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = Supabase.instance.client.auth.currentUser;
+      final isAdmin = user?.appMetadata['role'] == 'admin';
+      if (!isAdmin && mounted) {
+        Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+      }
+    });
+  }
+
   static const _tabs = [
     (Icons.list_alt, 'Bookings'),
     (Icons.location_on, 'Manage Spots'),
     (Icons.hotel, 'Manage Hotels'),
+    (Icons.tour, 'Manage Packages'),
     (Icons.directions_car, 'Manage Transport'),
   ];
 
@@ -266,7 +279,8 @@ class _AdminScreenState extends State<AdminScreen> {
       case 0: return const _BookingsTab();
       case 1: return const _ManageSpotsTab();
       case 2: return const _ManageHotelsTab();
-      case 3: return const _ManageTransportTab();
+      case 3: return const _ManagePackagesTab();
+      case 4: return const _ManageTransportTab();
       default: return const _BookingsTab();
     }
   }
@@ -1329,6 +1343,214 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
             ),
           ],
       ],
+    );
+  }
+}
+
+// ── Tab: Manage Packages ──────────────────────────────────────────────────────
+
+class _ManagePackagesTab extends StatefulWidget {
+  const _ManagePackagesTab();
+  @override
+  State<_ManagePackagesTab> createState() => _ManagePackagesTabState();
+}
+
+class _ManagePackagesTabState extends State<_ManagePackagesTab> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _packages = [];
+
+  static List<Map<String, dynamic>> get _defaults => tourPackages.map((p) => {
+    'id': p.id,
+    'name': p.name,
+    'tagline': p.tagline,
+    'region': p.region,
+    'duration_days': p.durationDays,
+    'joiner_price': p.joinerPricePerPerson,
+    'premium_price': p.premiumPricePerPerson,
+    'image_url': p.imageUrl,
+    'is_active': true,
+  }).toList();
+
+  @override
+  void initState() { super.initState(); _load(); }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final data = await Supabase.instance.client.from('tour_packages').select();
+      final list = (data as List).cast<Map<String, dynamic>>();
+      setState(() { _packages = list.isEmpty ? _defaults : list; _loading = false; });
+    } catch (_) {
+      setState(() { _packages = _defaults; _loading = false; });
+    }
+  }
+
+  void _showEditDialog(Map<String, dynamic> pkg) {
+    final joinerCtrl = TextEditingController(
+        text: (pkg['joiner_price'] as num?)?.toStringAsFixed(0) ?? '0');
+    final premiumCtrl = TextEditingController(
+        text: (pkg['premium_price'] as num?)?.toStringAsFixed(0) ?? '0');
+
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Edit Prices — ${pkg['name']}',
+            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF006994))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: joinerCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Joiner Price per Person (₱)',
+                border: OutlineInputBorder(),
+                prefixText: '₱ ',
+              ),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: premiumCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Premium Price per Person (₱)',
+                border: OutlineInputBorder(),
+                prefixText: '₱ ',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              final joiner = double.tryParse(joinerCtrl.text);
+              final premium = double.tryParse(premiumCtrl.text);
+              if (joiner == null || premium == null) return;
+              Navigator.pop(context);
+              try {
+                await Supabase.instance.client
+                    .from('tour_packages')
+                    .upsert({'id': pkg['id'], 'joiner_price': joiner, 'premium_price': premium});
+                _load();
+              } catch (e) {
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+              }
+            },
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF006994)),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Manage Packages',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
+            IconButton(onPressed: _load, icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4))),
+          ],
+        ),
+        const SizedBox(height: 4),
+        const Text('Edit joiner and premium prices for each tour package.',
+            style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
+        const SizedBox(height: 20),
+        if (_loading)
+          const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+        else
+          for (final pkg in _packages) _PackageAdminRow(package: pkg, onEdit: () => _showEditDialog(pkg)),
+      ],
+    );
+  }
+}
+
+class _PackageAdminRow extends StatelessWidget {
+  final Map<String, dynamic> package;
+  final VoidCallback onEdit;
+  const _PackageAdminRow({required this.package, required this.onEdit});
+
+  @override
+  Widget build(BuildContext context) {
+    final joiner = (package['joiner_price'] as num?)?.toStringAsFixed(0) ?? '—';
+    final premium = (package['premium_price'] as num?)?.toStringAsFixed(0) ?? '—';
+    final days = package['duration_days'] as int? ?? 1;
+    final region = package['region'] as String? ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE8EDEF)),
+      ),
+      child: Row(children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: Image.network(
+            package['image_url'] as String? ?? '',
+            width: 80, height: 80, fit: BoxFit.cover,
+            errorBuilder: (_, _, _) => Container(
+              width: 80, height: 80,
+              color: const Color(0xFFE0F7FA),
+              child: const Icon(Icons.tour, color: Color(0xFF006994), size: 32),
+            ),
+          ),
+        ),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(package['name'] as String? ?? '—',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+            const SizedBox(height: 4),
+            Text('$region · $days day${days != 1 ? 's' : ''}',
+                style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6))),
+            const SizedBox(height: 10),
+            Row(children: [
+              _PkgPriceTag(label: 'Joiner', price: '₱$joiner', color: const Color(0xFF00BCD4)),
+              const SizedBox(width: 10),
+              _PkgPriceTag(label: 'Premium', price: '₱$premium', color: const Color(0xFFFF8C00)),
+            ]),
+          ]),
+        ),
+        TextButton.icon(
+          onPressed: onEdit,
+          icon: const Icon(Icons.edit, size: 16),
+          label: const Text('Edit Prices'),
+          style: TextButton.styleFrom(foregroundColor: const Color(0xFF006994)),
+        ),
+      ]),
+    );
+  }
+}
+
+class _PkgPriceTag extends StatelessWidget {
+  final String label;
+  final String price;
+  final Color color;
+  const _PkgPriceTag({required this.label, required this.price, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(label, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color)),
+        Text(price, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: color)),
+        Text('/person', style: const TextStyle(fontSize: 9, color: Color(0xFF8B99A6))),
+      ]),
     );
   }
 }

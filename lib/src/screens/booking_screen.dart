@@ -116,8 +116,6 @@ class _BookingScreenState extends State<BookingScreen> {
       final data = await Supabase.instance.client.from('bookings').insert({
         'user_id': user.id,
         'user_email': user.email ?? '',
-        'tour_id': _packageId,
-        'destination_ids': [],
         'guest_count': _guestCount,
         'start_date': _startDate!.toIso8601String().substring(0, 10),
         'end_date': _endDate!.toIso8601String().substring(0, 10),

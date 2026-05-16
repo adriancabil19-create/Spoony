@@ -7,6 +7,7 @@ import '../data/cebu_data.dart';
 import 'booking_screen.dart';
 import 'explore_screen.dart';
 import 'dashboard_screen.dart';
+import 'admin_screen.dart';
 import 'auth_screen.dart';
 
 // ── Color palette ─────────────────────────────────────────────────────────────
@@ -1007,6 +1008,8 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
     super.dispose();
   }
 
+  bool get _isAdmin => _user?.appMetadata['role'] == 'admin';
+
   String _initials(User user) {
     final raw = user.userMetadata?['name'] as String? ??
         user.userMetadata?['full_name'] as String? ??
@@ -1063,6 +1066,10 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
               _MobileNavItem(label: 'Dashboard', icon: Icons.dashboard_outlined,
                   active: widget.current == 'dashboard',
                   onTap: () { Navigator.pop(context); Navigator.pushNamed(context, DashboardScreen.routeName); }),
+              if (_isAdmin)
+                _MobileNavItem(label: 'Admin Panel', icon: Icons.admin_panel_settings_outlined,
+                    active: widget.current == 'admin',
+                    onTap: () { Navigator.pop(context); Navigator.pushNamed(context, AdminScreen.routeName); }),
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1151,6 +1158,9 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
                   onTap: () => Navigator.pushNamed(context, BookingScreen.routeName)),
               _NavBtn(label: 'Dashboard', active: widget.current == 'dashboard',
                   onTap: () => Navigator.pushNamed(context, DashboardScreen.routeName)),
+              if (_isAdmin)
+                _NavBtn(label: 'Admin', active: widget.current == 'admin',
+                    onTap: () => Navigator.pushNamed(context, AdminScreen.routeName)),
               const SizedBox(width: 20),
               if (_user != null) ...[
                 CircleAvatar(
