@@ -108,3 +108,11 @@ CREATE POLICY "Users cancel own bookings"
   TO authenticated
   USING (auth.uid()::uuid = user_id::uuid AND status = 'pending')
   WITH CHECK (TRUE);
+
+-- 6. GRANT TABLE PRIVILEGES
+-- (RLS policies alone are not enough — roles must also be granted access)
+GRANT SELECT, INSERT, UPDATE ON public.bookings TO authenticated;
+GRANT SELECT                  ON public.bookings TO anon;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.destinations TO authenticated;
+GRANT SELECT                          ON public.destinations TO anon;
