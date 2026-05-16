@@ -244,7 +244,14 @@ class _AdminScreenState extends State<AdminScreen> {
               );
             })),
 
-            const SpoonyFooter(),
+            Container(
+              color: const Color(0xFF006994),
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              child: const Center(
+                child: Text('© 2025 Spoony Travel. All rights reserved.',
+                    style: TextStyle(color: Colors.white70, fontSize: 12)),
+              ),
+            ),
                 ],
               ),
             ),
@@ -869,9 +876,51 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
     }
   }
 
+  static const _regionOrder = [
+    'cebu_city', 'cebuCity',
+    'south_cebu', 'southCebu',
+    'north_cebu', 'northCebu',
+    'islands', 'bohol',
+  ];
+
+  static const _regionLabels = <String, String>{
+    'cebu_city': 'Cebu City',   'cebuCity': 'Cebu City',
+    'south_cebu': 'South Cebu', 'southCebu': 'South Cebu',
+    'north_cebu': 'North Cebu', 'northCebu': 'North Cebu',
+    'islands': 'Islands',        'bohol': 'Islands',
+  };
+
   @override
   Widget build(BuildContext context) {
     final all = _mergedSpots;
+
+    // Group spots by region in display order
+    final Map<String, List<Map<String, dynamic>>> grouped = {};
+    for (final s in all) {
+      grouped.putIfAbsent(s['region'] as String? ?? 'other', () => []).add(s);
+    }
+    final orderedKeys = [
+      ..._regionOrder.where(grouped.containsKey),
+      ...grouped.keys.where((k) => !_regionOrder.contains(k)),
+    ];
+
+    final spotWidgets = <Widget>[];
+    for (final key in orderedKeys) {
+      final spots = grouped[key]!;
+      spotWidgets.add(_SpotSectionHeader(
+        label: _regionLabels[key] ?? key,
+        count: spots.length,
+      ));
+      for (final s in spots) {
+        spotWidgets.add(_SpotRow(
+          spot: s,
+          onEdit: () => _showEditDialog(s),
+          onToggle: () => _toggleAvailability(s),
+          onDelete: s['_isDefault'] == true ? null : () => _deleteSpot(s),
+        ));
+      }
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -900,7 +949,7 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
         const SizedBox(height: 4),
         const Text('Edit, add, or toggle visibility of tour destinations.',
             style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         if (_loading)
           const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
         else if (_error != null)
@@ -912,10 +961,10 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: const Color(0xFFFFB74D)),
             ),
-            child: Row(children: [
-              const Icon(Icons.wifi_off, size: 16, color: Color(0xFFF57C00)),
-              const SizedBox(width: 8),
-              const Expanded(child: Text(
+            child: const Row(children: [
+              Icon(Icons.wifi_off, size: 16, color: Color(0xFFF57C00)),
+              SizedBox(width: 8),
+              Expanded(child: Text(
                 'Could not reach Supabase — showing built-in destinations. Check your Supabase connection.',
                 style: TextStyle(fontSize: 12, color: Color(0xFFF57C00)),
               )),
@@ -924,13 +973,41 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
         else if (all.isEmpty)
           const _AdminEmpty(message: 'No spots yet. Click "Add Spot" to create one.')
         else
-          for (final s in all) _SpotRow(
-            spot: s,
-            onEdit: () => _showEditDialog(s),
-            onToggle: () => _toggleAvailability(s),
-            onDelete: s['_isDefault'] == true ? null : () => _deleteSpot(s),
+          Expanded(
+            child: ListView(children: spotWidgets),
           ),
       ],
+    );
+  }
+}
+
+class _SpotSectionHeader extends StatelessWidget {
+  final String label;
+  final int count;
+  const _SpotSectionHeader({required this.label, required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
+      child: Row(children: [
+        Text(label,
+            style: const TextStyle(
+                fontSize: 13, fontWeight: FontWeight.w800, color: Color(0xFF006994))),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE0F7FA),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text('$count',
+              style: const TextStyle(
+                  fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
+        ),
+        const SizedBox(width: 10),
+        const Expanded(child: Divider(color: Color(0xFFE8EDEF), thickness: 1)),
+      ]),
     );
   }
 }
