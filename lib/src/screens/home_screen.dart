@@ -102,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisCount: mobile ? 1 : 3,
                           mainAxisSpacing: 24,
                           crossAxisSpacing: 24,
-                          childAspectRatio: mobile ? 2.2 : 1.1,
+                          mainAxisExtent: mobile ? 130 : 355,
                         ),
                         itemCount: popular.length,
                         itemBuilder: (context, i) => _DestCard(spot: popular[i]),
@@ -777,34 +777,23 @@ class _WhySection extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 40),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: mobile ? 1 : 3,
-            mainAxisSpacing: 20,
-            crossAxisSpacing: 20,
-            childAspectRatio: mobile ? 3.2 : 1.2,
-            children: const [
-              _FeatureTile(
-                icon: Icons.route_rounded,
-                color: _kOcean,
-                title: 'Smart Itinerary',
-                desc: 'Optimized routes, distances, and schedules for your Cebu adventure.',
-              ),
-              _FeatureTile(
-                icon: Icons.shield_rounded,
-                color: _kTeal,
-                title: 'Secure Booking',
-                desc: 'Verified partners, transparent pricing, and 24/7 dedicated support.',
-              ),
-              _FeatureTile(
-                icon: Icons.eco_rounded,
-                color: _kGold,
-                title: 'Local Experiences',
-                desc: 'Handpicked hidden gems and exclusive tours across all of Cebu.',
-              ),
-            ],
-          ),
+          mobile
+              ? const Column(children: [
+                  _FeatureTile(icon: Icons.route_rounded, color: _kOcean, title: 'Smart Itinerary', desc: 'Optimized routes, distances, and schedules for your Cebu adventure.'),
+                  SizedBox(height: 16),
+                  _FeatureTile(icon: Icons.shield_rounded, color: _kTeal, title: 'Secure Booking', desc: 'Verified partners, transparent pricing, and 24/7 dedicated support.'),
+                  SizedBox(height: 16),
+                  _FeatureTile(icon: Icons.eco_rounded, color: _kGold, title: 'Local Experiences', desc: 'Handpicked hidden gems and exclusive tours across all of Cebu.'),
+                ])
+              : const IntrinsicHeight(
+                  child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    Expanded(child: _FeatureTile(icon: Icons.route_rounded, color: _kOcean, title: 'Smart Itinerary', desc: 'Optimized routes, distances, and schedules for your Cebu adventure.')),
+                    SizedBox(width: 20),
+                    Expanded(child: _FeatureTile(icon: Icons.shield_rounded, color: _kTeal, title: 'Secure Booking', desc: 'Verified partners, transparent pricing, and 24/7 dedicated support.')),
+                    SizedBox(width: 20),
+                    Expanded(child: _FeatureTile(icon: Icons.eco_rounded, color: _kGold, title: 'Local Experiences', desc: 'Handpicked hidden gems and exclusive tours across all of Cebu.')),
+                  ]),
+                ),
         ],
       ),
     );
@@ -841,7 +830,7 @@ class _FeatureTileState extends State<_FeatureTile> {
             color: _hovered ? widget.color.withValues(alpha: 0.3) : const Color(0xFFE2E8F0),
           ),
         ),
-        child: Row(children: [
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
             width: 48, height: 48,
             decoration: BoxDecoration(
@@ -856,8 +845,7 @@ class _FeatureTileState extends State<_FeatureTile> {
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark)),
             const SizedBox(height: 4),
             Text(widget.desc,
-                style: const TextStyle(fontSize: 12, color: _kMid, height: 1.5),
-                maxLines: 2, overflow: TextOverflow.ellipsis),
+                style: const TextStyle(fontSize: 12, color: _kMid, height: 1.5)),
           ])),
         ]),
       ),
@@ -892,17 +880,21 @@ class _TestimonialsSection extends StatelessWidget {
           const Text('Real reviews from people who explored Cebu with Spoony.',
               style: TextStyle(fontSize: 14, color: _kMid), textAlign: TextAlign.center),
           const SizedBox(height: 40),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: mobile ? 1 : 3,
-            mainAxisSpacing: 20,
-            crossAxisSpacing: 20,
-            childAspectRatio: mobile ? 2.0 : 0.88,
-            children: _reviews
-                .map((r) => _ReviewCard(name: r.$1, location: r.$2, rating: r.$3, review: r.$4))
-                .toList(),
-          ),
+          if (mobile)
+            Column(children: _reviews
+                .map((r) => Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _ReviewCard(name: r.$1, location: r.$2, rating: r.$3, review: r.$4),
+                    ))
+                .toList())
+          else
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: _ReviewCard(name: _reviews[0].$1, location: _reviews[0].$2, rating: _reviews[0].$3, review: _reviews[0].$4)),
+              const SizedBox(width: 20),
+              Expanded(child: _ReviewCard(name: _reviews[1].$1, location: _reviews[1].$2, rating: _reviews[1].$3, review: _reviews[1].$4)),
+              const SizedBox(width: 20),
+              Expanded(child: _ReviewCard(name: _reviews[2].$1, location: _reviews[2].$2, rating: _reviews[2].$3, review: _reviews[2].$4)),
+            ]),
         ],
       ),
     );
@@ -935,12 +927,9 @@ class _ReviewCard extends StatelessWidget {
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kDark)),
         ]),
         const SizedBox(height: 14),
-        Expanded(
-          child: Text('"$review"',
-              style: const TextStyle(fontSize: 13, color: _kMid, height: 1.6),
-              overflow: TextOverflow.fade),
-        ),
-        const SizedBox(height: 16),
+        Text('"$review"',
+            style: const TextStyle(fontSize: 13, color: _kMid, height: 1.6)),
+        const SizedBox(height: 20),
         Row(children: [
           CircleAvatar(
             radius: 18,
