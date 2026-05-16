@@ -81,13 +81,13 @@ CREATE POLICY "Auth users delete destinations"
 CREATE POLICY "Users insert own bookings"
   ON bookings FOR INSERT
   TO authenticated
-  WITH CHECK (auth.uid() = user_id);
+  WITH CHECK (auth.uid()::uuid = user_id::uuid);
 
 -- Users can see their own bookings (guest booking history)
 CREATE POLICY "Users read own bookings"
   ON bookings FOR SELECT
   TO authenticated
-  USING (auth.uid() = user_id);
+  USING (auth.uid()::uuid = user_id::uuid);
 
 -- Admin can read ALL bookings
 CREATE POLICY "Auth users read all bookings"
@@ -106,5 +106,5 @@ CREATE POLICY "Auth users update bookings"
 CREATE POLICY "Users cancel own bookings"
   ON bookings FOR UPDATE
   TO authenticated
-  USING (auth.uid() = user_id AND status = 'pending')
+  USING (auth.uid()::uuid = user_id::uuid AND status = 'pending')
   WITH CHECK (TRUE);
