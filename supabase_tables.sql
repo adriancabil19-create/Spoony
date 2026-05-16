@@ -109,7 +109,41 @@ CREATE POLICY "Users cancel own bookings"
   USING (auth.uid()::uuid = user_id::uuid AND status = 'pending')
   WITH CHECK (TRUE);
 
--- 6. GRANT TABLE PRIVILEGES
+-- 6. TOUR PACKAGES TABLE
+CREATE TABLE IF NOT EXISTS tour_packages (
+  id            TEXT        PRIMARY KEY DEFAULT gen_random_uuid()::TEXT,
+  name          TEXT        NOT NULL,
+  tagline       TEXT        DEFAULT '',
+  description   TEXT        DEFAULT '',
+  highlights    TEXT[]      DEFAULT '{}',
+  duration_days INT         NOT NULL DEFAULT 1,
+  joiner_price  NUMERIC(10,2) NOT NULL DEFAULT 0,
+  premium_price NUMERIC(10,2) NOT NULL DEFAULT 0,
+  image_url     TEXT        DEFAULT '',
+  region        TEXT        DEFAULT '',
+  is_active     BOOLEAN     DEFAULT TRUE,
+  created_at    TIMESTAMPTZ DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE tour_packages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Public read active packages"
+  ON tour_packages FOR SELECT
+  USING (is_active = TRUE);
+
+CREATE POLICY "Auth users read all packages"
+  ON tour_packages FOR SELECT TO authenticated
+  USING (TRUE);
+
+CREATE POLICY "Auth users manage packages"
+  ON tour_packages FOR ALL TO authenticated
+  USING (TRUE) WITH CHECK (TRUE);
+
+GRANT SELECT                          ON public.tour_packages TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE  ON public.tour_packages TO authenticated;
+
+-- 7. GRANT TABLE PRIVILEGES
 -- (RLS policies alone are not enough — roles must also be granted access)
 GRANT SELECT, INSERT, UPDATE ON public.bookings TO authenticated;
 GRANT SELECT                  ON public.bookings TO anon;

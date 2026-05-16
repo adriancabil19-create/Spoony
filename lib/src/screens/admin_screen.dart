@@ -1357,12 +1357,20 @@ class _ManagePackagesTab extends StatefulWidget {
 
 class _ManagePackagesTabState extends State<_ManagePackagesTab> {
   bool _loading = true;
+  bool _dbAvailable = true;
   List<Map<String, dynamic>> _packages = [];
 
+  static const _regionOptions = [
+    'Cebu City', 'South Cebu', 'North Cebu', 'Bohol',
+  ];
+
   static List<Map<String, dynamic>> get _defaults => tourPackages.map((p) => {
+    '_isDefault': true,
     'id': p.id,
     'name': p.name,
     'tagline': p.tagline,
+    'description': p.description,
+    'highlights': p.highlights,
     'region': p.region,
     'duration_days': p.durationDays,
     'joiner_price': p.joinerPricePerPerson,
@@ -1375,74 +1383,270 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
   void initState() { super.initState(); _load(); }
 
   Future<void> _load() async {
+    if (!mounted) return;
     setState(() => _loading = true);
     try {
-      final data = await Supabase.instance.client.from('tour_packages').select();
+      final data = await Supabase.instance.client
+          .from('tour_packages')
+          .select()
+          .order('created_at', ascending: true);
+      if (!mounted) return;
       final list = (data as List).cast<Map<String, dynamic>>();
-      setState(() { _packages = list.isEmpty ? _defaults : list; _loading = false; });
+      setState(() {
+        _dbAvailable = true;
+        _packages = list.isEmpty ? _defaults : list;
+        _loading = false;
+      });
     } catch (_) {
-      setState(() { _packages = _defaults; _loading = false; });
+      if (!mounted) return;
+      setState(() {
+        _dbAvailable = false;
+        _packages = _defaults;
+        _loading = false;
+      });
     }
   }
 
-  void _showEditDialog(Map<String, dynamic> pkg) {
+  void _showAddDialog() => _showPackageDialog(null);
+  void _showEditDialog(Map<String, dynamic> pkg) => _showPackageDialog(pkg);
+
+  void _showPackageDialog(Map<String, dynamic>? existing) {
+    final isDefault = existing?['_isDefault'] == true;
+    final isEdit = existing != null && !isDefault;
+
+    final nameCtrl = TextEditingController(text: existing?['name'] as String? ?? '');
+    final taglineCtrl = TextEditingController(text: existing?['tagline'] as String? ?? '');
+    final descCtrl = TextEditingController(text: existing?['description'] as String? ?? '');
+    final daysCtrl = TextEditingController(
+        text: (existing?['duration_days'] as int?)?.toString() ?? '1');
     final joinerCtrl = TextEditingController(
-        text: (pkg['joiner_price'] as num?)?.toStringAsFixed(0) ?? '0');
+        text: (existing?['joiner_price'] as num?)?.toStringAsFixed(0) ?? '');
     final premiumCtrl = TextEditingController(
-        text: (pkg['premium_price'] as num?)?.toStringAsFixed(0) ?? '0');
+        text: (existing?['premium_price'] as num?)?.toStringAsFixed(0) ?? '');
+    final imgCtrl = TextEditingController(text: existing?['image_url'] as String? ?? '');
+    final highlights = (existing?['highlights'] as List?)
+        ?.map((h) => h.toString()).toList() ?? [];
+    final highlightsCtrl = TextEditingController(text: highlights.join(', '));
+
+    String region = existing?['region'] as String? ?? _regionOptions.first;
+    if (!_regionOptions.contains(region)) region = _regionOptions.first;
+
+    bool saving = false;
+    String? errorMsg;
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Edit Prices — ${pkg['name']}',
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF006994))),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: joinerCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Joiner Price per Person (₱)',
-                border: OutlineInputBorder(),
-                prefixText: '₱ ',
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => AlertDialog(
+          title: Text(
+            isEdit ? 'Edit Package' : (isDefault ? 'Save to Database' : 'Add New Package'),
+            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF006994)),
+          ),
+          content: SizedBox(
+            width: 520,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (isDefault) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFF3E0),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFFB74D)),
+                      ),
+                      child: const Text(
+                        'This is a built-in default package. Saving it will add it to your database.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFF795548)),
+                      ),
+                    ),
+                  ],
+                  if (!_dbAvailable) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFEBEE),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'Database table "tour_packages" not found. Run the SQL in supabase_tables.sql first.',
+                        style: TextStyle(fontSize: 12, color: Color(0xFFB71C1C)),
+                      ),
+                    ),
+                  ],
+                  if (errorMsg != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(
+                          color: const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(8)),
+                      child: Text(errorMsg!,
+                          style: const TextStyle(color: Color(0xFFFF6B4A), fontSize: 12)),
+                    ),
+                  ],
+                  _DlgField(label: 'Package Name *', controller: nameCtrl, hint: 'e.g. South Cebu Adventure'),
+                  const SizedBox(height: 12),
+                  _DlgField(label: 'Tagline', controller: taglineCtrl, hint: 'Short catchphrase'),
+                  const SizedBox(height: 12),
+                  _DlgField(label: 'Description', controller: descCtrl, hint: 'Full description', maxLines: 3),
+                  const SizedBox(height: 12),
+                  const Text('Region *',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5D6D7A))),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: region,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                    items: _regionOptions
+                        .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                        .toList(),
+                    onChanged: (v) { if (v != null) setDlg(() => region = v); },
+                  ),
+                  const SizedBox(height: 12),
+                  Row(children: [
+                    Expanded(child: _DlgField(
+                        label: 'Duration (days) *',
+                        controller: daysCtrl,
+                        hint: '1',
+                        keyboardType: TextInputType.number)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _DlgField(
+                        label: 'Joiner Price/pax (₱) *',
+                        controller: joinerCtrl,
+                        hint: '1500',
+                        keyboardType: TextInputType.number)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _DlgField(
+                        label: 'Premium Price/pax (₱) *',
+                        controller: premiumCtrl,
+                        hint: '3000',
+                        keyboardType: TextInputType.number)),
+                  ]),
+                  const SizedBox(height: 12),
+                  _DlgField(label: 'Image URL', controller: imgCtrl, hint: 'https://...'),
+                  const SizedBox(height: 12),
+                  _DlgField(
+                    label: 'Highlights (comma-separated)',
+                    controller: highlightsCtrl,
+                    hint: 'Kawasan Falls, Whale Shark Watching',
+                    maxLines: 2,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: premiumCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Premium Price per Person (₱)',
-                border: OutlineInputBorder(),
-                prefixText: '₱ ',
-              ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final name = nameCtrl.text.trim();
+                      final joiner = double.tryParse(joinerCtrl.text);
+                      final premium = double.tryParse(premiumCtrl.text);
+                      final days = int.tryParse(daysCtrl.text) ?? 1;
+                      if (name.isEmpty || joiner == null || premium == null) {
+                        setDlg(() => errorMsg = 'Name, joiner price and premium price are required.');
+                        return;
+                      }
+                      setDlg(() { saving = true; errorMsg = null; });
+                      final highlightsList = highlightsCtrl.text
+                          .split(',')
+                          .map((s) => s.trim())
+                          .where((s) => s.isNotEmpty)
+                          .toList();
+                      final payload = {
+                        'name': name,
+                        'tagline': taglineCtrl.text.trim(),
+                        'description': descCtrl.text.trim(),
+                        'region': region,
+                        'duration_days': days,
+                        'joiner_price': joiner,
+                        'premium_price': premium,
+                        'image_url': imgCtrl.text.trim(),
+                        'highlights': highlightsList,
+                      };
+                      try {
+                        if (isEdit) {
+                          await Supabase.instance.client
+                              .from('tour_packages')
+                              .update(payload)
+                              .eq('id', existing['id'] as String);
+                        } else {
+                          await Supabase.instance.client
+                              .from('tour_packages')
+                              .insert(payload);
+                        }
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        _load();
+                      } catch (e) {
+                        setDlg(() { saving = false; errorMsg = e.toString(); });
+                      }
+                    },
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF006994)),
+              child: saving
+                  ? const SizedBox(
+                      height: 16, width: 16,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : Text(isEdit ? 'Save Changes' : 'Add Package'),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _toggleActive(Map<String, dynamic> pkg) async {
+    if (pkg['_isDefault'] == true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Save this package to the database first.')),
+      );
+      return;
+    }
+    final current = pkg['is_active'] as bool? ?? true;
+    try {
+      await Supabase.instance.client
+          .from('tour_packages')
+          .update({'is_active': !current})
+          .eq('id', pkg['id'] as String);
+      _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _delete(Map<String, dynamic> pkg) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete Package'),
+        content: Text('Remove "${pkg['name']}" from the platform?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           FilledButton(
-            onPressed: () async {
-              final joiner = double.tryParse(joinerCtrl.text);
-              final premium = double.tryParse(premiumCtrl.text);
-              if (joiner == null || premium == null) return;
-              Navigator.pop(context);
-              try {
-                await Supabase.instance.client
-                    .from('tour_packages')
-                    .upsert({'id': pkg['id'], 'joiner_price': joiner, 'premium_price': premium});
-                _load();
-              } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-              }
-            },
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF006994)),
-            child: const Text('Save'),
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF6B4A)),
+            child: const Text('Delete'),
           ),
         ],
       ),
     );
+    if (confirm != true) return;
+    try {
+      await Supabase.instance.client
+          .from('tour_packages')
+          .delete()
+          .eq('id', pkg['id'] as String);
+      _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 
   @override
@@ -1455,17 +1659,55 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
           children: [
             const Text('Manage Packages',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
-            IconButton(onPressed: _load, icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4))),
+            Row(children: [
+              IconButton(onPressed: _load, icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4))),
+              FilledButton.icon(
+                onPressed: _showAddDialog,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add Package'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF006994),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+              ),
+            ]),
           ],
         ),
         const SizedBox(height: 4),
-        const Text('Edit joiner and premium prices for each tour package.',
+        const Text('Add, edit, toggle or delete tour packages.',
             style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
-        const SizedBox(height: 20),
+        const SizedBox(height: 10),
+        if (!_dbAvailable)
+          Container(
+            margin: const EdgeInsets.only(bottom: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3E0),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFFFB74D)),
+            ),
+            child: const Row(children: [
+              Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFFF57C00)),
+              SizedBox(width: 8),
+              Expanded(child: Text(
+                'Table "tour_packages" not found in Supabase. Run the SQL in supabase_tables.sql to enable full CRUD. Showing built-in defaults.',
+                style: TextStyle(fontSize: 12, color: Color(0xFFF57C00)),
+              )),
+            ]),
+          ),
         if (_loading)
           const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+        else if (_packages.isEmpty)
+          const _AdminEmpty(message: 'No packages yet. Click "Add Package" to create one.')
         else
-          for (final pkg in _packages) _PackageAdminRow(package: pkg, onEdit: () => _showEditDialog(pkg)),
+          for (final pkg in _packages)
+            _PackageAdminRow(
+              package: pkg,
+              onEdit: () => _showEditDialog(pkg),
+              onToggle: () => _toggleActive(pkg),
+              onDelete: pkg['_isDefault'] == true ? null : () => _delete(pkg),
+            ),
       ],
     );
   }
@@ -1474,7 +1716,15 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
 class _PackageAdminRow extends StatelessWidget {
   final Map<String, dynamic> package;
   final VoidCallback onEdit;
-  const _PackageAdminRow({required this.package, required this.onEdit});
+  final VoidCallback onToggle;
+  final VoidCallback? onDelete;
+
+  const _PackageAdminRow({
+    required this.package,
+    required this.onEdit,
+    required this.onToggle,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1482,6 +1732,8 @@ class _PackageAdminRow extends StatelessWidget {
     final premium = (package['premium_price'] as num?)?.toStringAsFixed(0) ?? '—';
     final days = package['duration_days'] as int? ?? 1;
     final region = package['region'] as String? ?? '';
+    final active = package['is_active'] as bool? ?? true;
+    final isDefault = package['_isDefault'] == true;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1489,44 +1741,96 @@ class _PackageAdminRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8EDEF)),
+        border: Border.all(
+            color: isDefault ? const Color(0xFFFFCC80) : const Color(0xFFE8EDEF)),
       ),
-      child: Row(children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.network(
-            package['image_url'] as String? ?? '',
-            width: 80, height: 80, fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(
-              width: 80, height: 80,
-              color: const Color(0xFFE0F7FA),
-              child: const Icon(Icons.tour, color: Color(0xFF006994), size: 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                package['image_url'] as String? ?? '',
+                width: 80, height: 80, fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => Container(
+                  width: 80, height: 80,
+                  color: const Color(0xFFE0F7FA),
+                  child: const Icon(Icons.tour, color: Color(0xFF006994), size: 32),
+                ),
+              ),
             ),
-          ),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(package['name'] as String? ?? '—',
-                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
-            const SizedBox(height: 4),
-            Text('$region · $days day${days != 1 ? 's' : ''}',
-                style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6))),
-            const SizedBox(height: 10),
-            Row(children: [
-              _PkgPriceTag(label: 'Joiner', price: '₱$joiner', color: const Color(0xFF00BCD4)),
-              const SizedBox(width: 10),
-              _PkgPriceTag(label: 'Premium', price: '₱$premium', color: const Color(0xFFFF8C00)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Flexible(
+                    child: Text(package['name'] as String? ?? '—',
+                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                  ),
+                  if (isDefault) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFCC80),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text('Default',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF795548))),
+                    ),
+                  ],
+                ]),
+                const SizedBox(height: 3),
+                Text(package['tagline'] as String? ?? '',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6)),
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 6),
+                Text('$region · $days day${days != 1 ? 's' : ''}',
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6))),
+                const SizedBox(height: 8),
+                Row(children: [
+                  _PkgPriceTag(label: 'Joiner', price: '₱$joiner', color: const Color(0xFF00BCD4)),
+                  const SizedBox(width: 10),
+                  _PkgPriceTag(label: 'Premium', price: '₱$premium', color: const Color(0xFFFF8C00)),
+                ]),
+              ]),
+            ),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              TextButton.icon(
+                onPressed: onEdit,
+                icon: const Icon(Icons.edit, size: 15),
+                label: Text(isDefault ? 'Save to DB' : 'Edit'),
+                style: TextButton.styleFrom(
+                    foregroundColor: isDefault ? const Color(0xFFFF8C00) : const Color(0xFF006994),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4)),
+              ),
+              if (!isDefault) ...[
+                Row(children: [
+                  Switch(
+                    value: active,
+                    onChanged: (_) => onToggle(),
+                    activeThumbColor: const Color(0xFF00BCD4),
+                  ),
+                  Text(active ? 'On' : 'Off',
+                      style: TextStyle(
+                        fontSize: 12, fontWeight: FontWeight.w600,
+                        color: active ? const Color(0xFF50C878) : const Color(0xFFFF6B4A),
+                      )),
+                  const SizedBox(width: 4),
+                  IconButton(
+                    onPressed: onDelete,
+                    icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFFF6B4A)),
+                    tooltip: 'Delete',
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ]),
+              ],
             ]),
           ]),
-        ),
-        TextButton.icon(
-          onPressed: onEdit,
-          icon: const Icon(Icons.edit, size: 16),
-          label: const Text('Edit Prices'),
-          style: TextButton.styleFrom(foregroundColor: const Color(0xFF006994)),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }
