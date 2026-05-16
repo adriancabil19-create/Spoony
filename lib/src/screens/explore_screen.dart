@@ -142,7 +142,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                 crossAxisCount: cols,
                                 mainAxisSpacing: 20,
                                 crossAxisSpacing: 20,
-                                childAspectRatio: cols == 1 ? 1.6 : 0.75,
+                                mainAxisExtent: cols == 1 ? 130 : 310,
                               ),
                               itemCount: _filtered.length,
                               itemBuilder: (context, i) => _DestinationGridCard(spot: _filtered[i]),

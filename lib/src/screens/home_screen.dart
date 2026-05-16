@@ -624,9 +624,23 @@ class _DestCardState extends State<_DestCard> {
           duration: const Duration(milliseconds: 200),
           transform: Matrix4.translationValues(0, _hovered ? -6 : 0, 0),
           decoration: BoxDecoration(
-            color: Colors.transparent,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Colors.white.withValues(alpha: _hovered ? 0.92 : 0.80),
+                Colors.white.withValues(alpha: _hovered ? 0.65 : 0.50),
+              ],
+            ),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.black.withValues(alpha: _hovered ? 0.12 : 0.06)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: _hovered ? 0.10 : 0.05),
+                blurRadius: _hovered ? 28 : 14,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: mobile
               ? Row(children: [
@@ -818,11 +832,26 @@ class _FeatureTileState extends State<_FeatureTile> {
         transform: Matrix4.translationValues(0, _hovered ? -4 : 0, 0),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.transparent,
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.white.withValues(alpha: _hovered ? 0.90 : 0.78),
+              Colors.white.withValues(alpha: _hovered ? 0.65 : 0.48),
+            ],
+          ),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _hovered ? widget.color.withValues(alpha: 0.4) : const Color(0xFFE2E8F0),
+            color: _hovered ? widget.color.withValues(alpha: 0.45) : Colors.white.withValues(alpha: 0.8),
+            width: 1.5,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: _hovered ? widget.color.withValues(alpha: 0.10) : Colors.black.withValues(alpha: 0.04),
+              blurRadius: _hovered ? 20 : 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
@@ -907,9 +936,16 @@ class _ReviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.transparent,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xCCFFFFFF), Color(0x80FFFFFF)],
+        ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.5),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 14, offset: const Offset(0, 4)),
+        ],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
