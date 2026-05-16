@@ -624,15 +624,9 @@ class _DestCardState extends State<_DestCard> {
           duration: const Duration(milliseconds: 200),
           transform: Matrix4.translationValues(0, _hovered ? -6 : 0, 0),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: _hovered ? 0.12 : 0.06),
-                blurRadius: _hovered ? 24 : 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
+            border: Border.all(color: Colors.black.withValues(alpha: _hovered ? 0.12 : 0.06)),
           ),
           child: mobile
               ? Row(children: [
@@ -763,7 +757,7 @@ class _WhySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.transparent,
+      color: Colors.white,
       padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 60),
       child: Column(
         children: [
@@ -824,10 +818,10 @@ class _FeatureTileState extends State<_FeatureTile> {
         transform: Matrix4.translationValues(0, _hovered ? -4 : 0, 0),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: _hovered ? widget.color.withValues(alpha: 0.05) : _kBg,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _hovered ? widget.color.withValues(alpha: 0.3) : const Color(0xFFE2E8F0),
+            color: _hovered ? widget.color.withValues(alpha: 0.4) : const Color(0xFFE2E8F0),
           ),
         ),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -913,9 +907,9 @@ class _ReviewCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 16, offset: const Offset(0, 4))],
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
