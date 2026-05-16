@@ -401,7 +401,7 @@ class _HeroSection extends StatelessWidget {
           height: heroH,
           width: double.infinity,
           child: Image.network(
-            'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=1600&q=80',
+            'https://upload.wikimedia.org/wikipedia/commons/0/00/Cebu-Cordova_Link_Expressway_%28CCLEX%29.jpg',
             fit: BoxFit.cover,
             errorBuilder: (_, _, _) => Container(color: _kOcean),
           ),
@@ -763,7 +763,7 @@ class _WhySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      color: Colors.transparent,
       padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 60),
       child: Column(
         children: [
