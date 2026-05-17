@@ -733,13 +733,17 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
                 : () async {
                     setState(() { _loading = true; _error = null; });
                     try {
-                      await Supabase.instance.client.auth.resetPasswordForEmail(
-                        _ctrl.text.trim(),
-                        redirectTo: 'https://spoony.vercel.app/',
-                      );
-                      setState(() => _sent = true);
+                      await Supabase.instance.client.auth
+                          .resetPasswordForEmail(
+                            _ctrl.text.trim(),
+                            redirectTo: 'https://spoony.vercel.app/',
+                          )
+                          .timeout(const Duration(seconds: 20));
+                      if (mounted) setState(() => _sent = true);
                     } on AuthException catch (e) {
-                      setState(() => _error = e.message);
+                      if (mounted) setState(() => _error = e.message);
+                    } catch (_) {
+                      if (mounted) setState(() => _error = 'Request timed out. Please check your connection and try again.');
                     } finally {
                       if (mounted) setState(() => _loading = false);
                     }
