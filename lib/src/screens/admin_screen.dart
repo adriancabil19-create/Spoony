@@ -643,10 +643,6 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
     final descCtrl = TextEditingController(text: existing?['description'] as String? ?? '');
     final feeCtrl = TextEditingController(
         text: (existing?['entrance_fee'] as num?)?.toStringAsFixed(0) ?? '');
-    final latCtrl = TextEditingController(
-        text: (existing?['latitude'] as num?)?.toString() ?? '');
-    final lngCtrl = TextEditingController(
-        text: (existing?['longitude'] as num?)?.toString() ?? '');
     final imgCtrl = TextEditingController(
         text: (existing?['image_urls'] as List?)?.isNotEmpty == true
             ? (existing!['image_urls'] as List).first as String
@@ -659,136 +655,105 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDlg) => AlertDialog(
-          title: Text(isEdit ? 'Edit Spot' : (isDefault ? 'Save to Database' : 'Add New Spot'),
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF006994))),
-          content: SizedBox(
-            width: 480,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (isDefault) ...[
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF3E0),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFFFB74D)),
-                      ),
-                      child: const Text(
-                        'This is a built-in default spot. Saving it will add it to your database so you can manage it here.',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF795548)),
-                      ),
-                    ),
-                  ],
-                  if (errorMsg != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBEE),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(errorMsg!,
-                          style: const TextStyle(color: Color(0xFFFF6B4A), fontSize: 12)),
-                    ),
-                  ],
-                  _DlgField(label: 'Spot Name *', controller: nameCtrl, hint: 'e.g. Kawasan Falls'),
-                  const SizedBox(height: 12),
-                  _DlgField(
-                      label: 'Description',
-                      controller: descCtrl,
-                      hint: 'Brief description',
-                      maxLines: 3),
-                  const SizedBox(height: 12),
-                  const Text('Region *',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5D6D7A))),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    initialValue: _regions.any((r) => r.$1 == region) ? region : _regions.first.$1,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                    items: _regions
-                        .map((r) => DropdownMenuItem(value: r.$1, child: Text(r.$2)))
-                        .toList(),
-                    onChanged: (v) { if (v != null) setDlg(() => region = v); },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: _DlgField(
-                        label: 'Entrance Fee (₱) *',
-                        controller: feeCtrl,
-                        hint: '0',
-                        keyboardType: TextInputType.number)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _DlgField(
-                        label: 'Latitude',
-                        controller: latCtrl,
-                        hint: '10.3157',
-                        keyboardType: TextInputType.number)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _DlgField(
-                        label: 'Longitude',
-                        controller: lngCtrl,
-                        hint: '123.8854',
-                        keyboardType: TextInputType.number)),
-                  ]),
-                  const SizedBox(height: 12),
-                  _DlgField(
-                      label: 'Image URL',
-                      controller: imgCtrl,
-                      hint: 'https://...'),
-                ],
+        builder: (ctx, setDlg) => _ModernDialog(
+          title: isEdit ? 'Edit Spot' : (isDefault ? 'Save to Database' : 'Add New Spot'),
+          body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (isDefault) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFBBF24)),
+                ),
+                child: const Row(children: [
+                  Icon(Icons.info_outline, size: 16, color: Color(0xFFD97706)),
+                  SizedBox(width: 8),
+                  Flexible(child: Text('Built-in spot — saving will add it to your database.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF92400E)))),
+                ]),
               ),
+            ],
+            if (errorMsg != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.error_outline, size: 16, color: Color(0xFFEF4444)),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text(errorMsg!, style: const TextStyle(fontSize: 12, color: Color(0xFFB91C1C)))),
+                ]),
+              ),
+            ],
+            _DlgField(label: 'SPOT NAME *', controller: nameCtrl, hint: 'e.g. Kawasan Falls'),
+            const SizedBox(height: 14),
+            _DlgField(label: 'DESCRIPTION', controller: descCtrl, hint: 'Brief description of the spot', maxLines: 3),
+            const SizedBox(height: 14),
+            const Text('REGION *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B), letterSpacing: 0.2)),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              initialValue: _regions.any((r) => r.$1 == region) ? region : _regions.first.$1,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              ),
+              items: _regions.map((r) => DropdownMenuItem(value: r.$1, child: Text(r.$2))).toList(),
+              onChanged: (v) { if (v != null) setDlg(() => region = v); },
             ),
-          ),
+            const SizedBox(height: 14),
+            _DlgField(label: 'ENTRANCE FEE (₱) *', controller: feeCtrl, hint: '0', keyboardType: TextInputType.number),
+            const SizedBox(height: 14),
+            _DlgField(label: 'IMAGE URL', controller: imgCtrl, hint: 'https://example.com/image.jpg'),
+          ]),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B)),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
-              onPressed: saving
-                  ? null
-                  : () async {
-                      if (nameCtrl.text.trim().isEmpty || feeCtrl.text.isEmpty) {
-                        setDlg(() => errorMsg = 'Name and entrance fee are required.');
-                        return;
-                      }
-                      setDlg(() { saving = true; errorMsg = null; });
-                      try {
-                        final payload = {
-                          'name': nameCtrl.text.trim(),
-                          'description': descCtrl.text.trim(),
-                          'region': region,
-                          'entrance_fee': double.tryParse(feeCtrl.text) ?? 0,
-                          'latitude': double.tryParse(latCtrl.text) ?? 10.3157,
-                          'longitude': double.tryParse(lngCtrl.text) ?? 123.8854,
-                          'image_urls': imgCtrl.text.trim().isNotEmpty ? [imgCtrl.text.trim()] : [],
-                        };
-                        if (isEdit) {
-                          await Supabase.instance.client
-                              .from('destinations')
-                              .update(payload)
-                              .eq('id', existing['id'] as String);
-                        } else {
-                          await Supabase.instance.client
-                              .from('destinations')
-                              .insert(payload);
-                        }
-                        if (ctx.mounted) Navigator.pop(ctx);
-                        _load();
-                      } catch (e) {
-                        setDlg(() { saving = false; errorMsg = e.toString(); });
-                      }
-                    },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF006994)),
+              onPressed: saving ? null : () async {
+                if (nameCtrl.text.trim().isEmpty || feeCtrl.text.isEmpty) {
+                  setDlg(() => errorMsg = 'Spot name and entrance fee are required.');
+                  return;
+                }
+                setDlg(() { saving = true; errorMsg = null; });
+                try {
+                  final payload = {
+                    'name': nameCtrl.text.trim(),
+                    'description': descCtrl.text.trim(),
+                    'region': region,
+                    'entrance_fee': double.tryParse(feeCtrl.text) ?? 0,
+                    'image_urls': imgCtrl.text.trim().isNotEmpty ? [imgCtrl.text.trim()] : [],
+                  };
+                  if (isEdit) {
+                    await Supabase.instance.client.from('destinations').update(payload).eq('id', existing['id'] as String);
+                  } else {
+                    await Supabase.instance.client.from('destinations').insert(payload);
+                  }
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  _load();
+                } catch (e) {
+                  setDlg(() { saving = false; errorMsg = e.toString(); });
+                }
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0EA5E9),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
               child: saving
-                  ? const SizedBox(
-                      height: 16, width: 16,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : Text(isEdit ? 'Save Changes' : 'Add Spot'),
             ),
           ],
@@ -1372,112 +1337,99 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDlg) => AlertDialog(
-          title: Text(
-            isEdit ? 'Edit Package' : (isDefault ? 'Save to Database' : 'Add New Package'),
-            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF006994)),
-          ),
-          content: SizedBox(
-            width: 520,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (isDefault) ...[
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF3E0),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFFFB74D)),
-                      ),
-                      child: const Text(
-                        'This is a built-in default package. Saving it will add it to your database.',
-                        style: TextStyle(fontSize: 12, color: Color(0xFF795548)),
-                      ),
-                    ),
-                  ],
-                  if (!_dbAvailable) ...[
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBEE),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'Database table "tour_packages" not found. Run the SQL in supabase_tables.sql first.',
-                        style: TextStyle(fontSize: 12, color: Color(0xFFB71C1C)),
-                      ),
-                    ),
-                  ],
-                  if (errorMsg != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      margin: const EdgeInsets.only(bottom: 14),
-                      decoration: BoxDecoration(
-                          color: const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(8)),
-                      child: Text(errorMsg!,
-                          style: const TextStyle(color: Color(0xFFFF6B4A), fontSize: 12)),
-                    ),
-                  ],
-                  _DlgField(label: 'Package Name *', controller: nameCtrl, hint: 'e.g. South Cebu Adventure'),
-                  const SizedBox(height: 12),
-                  _DlgField(label: 'Tagline', controller: taglineCtrl, hint: 'Short catchphrase'),
-                  const SizedBox(height: 12),
-                  _DlgField(label: 'Description', controller: descCtrl, hint: 'Full description', maxLines: 3),
-                  const SizedBox(height: 12),
-                  const Text('Region *',
-                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5D6D7A))),
-                  const SizedBox(height: 6),
-                  DropdownButtonFormField<String>(
-                    initialValue: region,
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    ),
-                    items: _regionOptions
-                        .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                        .toList(),
-                    onChanged: (v) { if (v != null) setDlg(() => region = v); },
-                  ),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: _DlgField(
-                        label: 'Duration (days) *',
-                        controller: daysCtrl,
-                        hint: '1',
-                        keyboardType: TextInputType.number)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _DlgField(
-                        label: 'Joiner Price/pax (₱) *',
-                        controller: joinerCtrl,
-                        hint: '1500',
-                        keyboardType: TextInputType.number)),
-                    const SizedBox(width: 12),
-                    Expanded(child: _DlgField(
-                        label: 'Premium Price/pax (₱) *',
-                        controller: premiumCtrl,
-                        hint: '3000',
-                        keyboardType: TextInputType.number)),
-                  ]),
-                  const SizedBox(height: 12),
-                  _DlgField(label: 'Image URL', controller: imgCtrl, hint: 'https://...'),
-                  const SizedBox(height: 12),
-                  _DlgField(
-                    label: 'Highlights (comma-separated)',
-                    controller: highlightsCtrl,
-                    hint: 'Kawasan Falls, Whale Shark Watching',
-                    maxLines: 2,
-                  ),
-                ],
+        builder: (ctx, setDlg) => _ModernDialog(
+          title: isEdit ? 'Edit Package' : (isDefault ? 'Save to Database' : 'Add New Package'),
+          body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (isDefault) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFF7ED),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFBBF24)),
+                ),
+                child: const Row(children: [
+                  Icon(Icons.info_outline, size: 16, color: Color(0xFFD97706)),
+                  SizedBox(width: 8),
+                  Flexible(child: Text('Built-in package — saving will add it to your database.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF92400E)))),
+                ]),
               ),
+            ],
+            if (!_dbAvailable) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                ),
+                child: const Row(children: [
+                  Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFFEF4444)),
+                  SizedBox(width: 8),
+                  Flexible(child: Text('Table "tour_packages" not found. Run the SQL in supabase_tables.sql first.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFFB91C1C)))),
+                ]),
+              ),
+            ],
+            if (errorMsg != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.error_outline, size: 16, color: Color(0xFFEF4444)),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text(errorMsg!, style: const TextStyle(fontSize: 12, color: Color(0xFFB91C1C)))),
+                ]),
+              ),
+            ],
+            _DlgField(label: 'PACKAGE NAME *', controller: nameCtrl, hint: 'e.g. South Cebu Adventure'),
+            const SizedBox(height: 14),
+            _DlgField(label: 'TAGLINE', controller: taglineCtrl, hint: 'Short catchphrase'),
+            const SizedBox(height: 14),
+            _DlgField(label: 'DESCRIPTION', controller: descCtrl, hint: 'Full description of the package', maxLines: 3),
+            const SizedBox(height: 14),
+            const Text('REGION *', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B), letterSpacing: 0.2)),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              initialValue: region,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              ),
+              items: _regionOptions.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+              onChanged: (v) { if (v != null) setDlg(() => region = v); },
             ),
-          ),
+            const SizedBox(height: 14),
+            Row(children: [
+              Expanded(child: _DlgField(label: 'DAYS *', controller: daysCtrl, hint: '1', keyboardType: TextInputType.number)),
+              const SizedBox(width: 12),
+              Expanded(child: _DlgField(label: 'JOINER ₱ *', controller: joinerCtrl, hint: '1500', keyboardType: TextInputType.number)),
+              const SizedBox(width: 12),
+              Expanded(child: _DlgField(label: 'PREMIUM ₱ *', controller: premiumCtrl, hint: '3000', keyboardType: TextInputType.number)),
+            ]),
+            const SizedBox(height: 14),
+            _DlgField(label: 'IMAGE URL', controller: imgCtrl, hint: 'https://example.com/image.jpg'),
+            const SizedBox(height: 14),
+            _DlgField(label: 'HIGHLIGHTS (comma-separated)', controller: highlightsCtrl, hint: 'Kawasan Falls, Whale Shark Watching', maxLines: 2),
+          ]),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B)),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
               onPressed: saving
                   ? null
@@ -1524,11 +1476,13 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
                         setDlg(() { saving = false; errorMsg = e.toString(); });
                       }
                     },
-              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF006994)),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0EA5E9),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
               child: saving
-                  ? const SizedBox(
-                      height: 16, width: 16,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                   : Text(isEdit ? 'Save Changes' : 'Add Package'),
             ),
           ],
@@ -1986,6 +1940,51 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
+// ── Modern dialog shell ───────────────────────────────────────────────────────
+
+class _ModernDialog extends StatelessWidget {
+  final String title;
+  final Widget body;
+  final List<Widget> actions;
+  const _ModernDialog({required this.title, required this.body, required this.actions});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 620),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)]),
+            ),
+            child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+          ),
+          Flexible(child: SingleChildScrollView(padding: const EdgeInsets.all(24), child: body)),
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+            ),
+            child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+              for (int i = 0; i < actions.length; i++) ...[
+                if (i > 0) const SizedBox(width: 10),
+                actions[i],
+              ],
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── Modern field ──────────────────────────────────────────────────────────────
+
 class _DlgField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
@@ -2003,25 +2002,35 @@ class _DlgField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF5D6D7A))),
-        const SizedBox(height: 6),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          keyboardType: keyboardType,
-          decoration: InputDecoration(
-            hintText: hint,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+          color: Color(0xFF64748B), letterSpacing: 0.2)),
+      const SizedBox(height: 6),
+      TextField(
+        controller: controller,
+        maxLines: maxLines,
+        keyboardType: keyboardType,
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14),
+          filled: true,
+          fillColor: const Color(0xFFF8FAFC),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
           ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         ),
-      ],
-    );
+      ),
+    ]);
   }
 }
 
