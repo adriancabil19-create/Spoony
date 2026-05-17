@@ -18,7 +18,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   static const _tabs = [
     (Icons.calendar_today, 'Upcoming Trips'),
     (Icons.history, 'Booking History'),
-    (Icons.bookmark, 'Saved Spots'),
+    (Icons.favorite, 'Favorite Spots'),
     (Icons.settings, 'Account Settings'),
   ];
 
@@ -200,7 +200,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 1:
         return _BookingHistoryTab();
       case 2:
-        return _SavedSpotsTab();
+        return _FavoriteSpotsTab();
       case 3:
         return _AccountSettingsTab(user: user);
       default:
@@ -339,22 +339,55 @@ class _BookingHistoryTabState extends State<_BookingHistoryTab> {
   }
 }
 
-// ── Tab: Saved Spots ──────────────────────────────────────────────────────────
+// ── Tab: Favorite Spots ───────────────────────────────────────────────────────
 
-class _SavedSpotsTab extends StatelessWidget {
+class _FavoriteSpotsTab extends StatefulWidget {
+  @override
+  State<_FavoriteSpotsTab> createState() => _FavoriteSpotsTabState();
+}
+
+class _FavoriteSpotsTabState extends State<_FavoriteSpotsTab> {
+  List<String> _favorites = [];
+
+  @override
+  void initState() {
+    super.initState();
+    final raw = Supabase.instance.client.auth.currentUser?.userMetadata?['favorites'];
+    if (raw is List) _favorites = raw.cast<String>();
+  }
+
+  Future<void> _remove(String name) async {
+    final updated = _favorites.where((f) => f != name).toList();
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(data: {'favorites': updated}),
+      );
+      if (mounted) setState(() => _favorites = updated);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to remove favorite.')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Saved Spots',
+        const Text('Favorite Spots',
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
         const SizedBox(height: 4),
-        const Text("Destinations you've bookmarked.",
+        const Text("Destinations you've saved as favorites.",
             style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
         const SizedBox(height: 28),
-        ...['Kawasan Falls', 'Malapascua Island', 'Chocolate Hills', 'Oslob Whale Shark']
-            .map((name) => _SavedSpotTile(name: name)),
+        if (_favorites.isEmpty)
+          const _EmptyState(message: 'No favorites yet. Heart a destination in Explore!')
+        else
+          for (final name in _favorites)
+            _FavoriteSpotTile(name: name, onRemove: () => _remove(name)),
       ],
     );
   }
@@ -805,9 +838,10 @@ class _TripDetail extends StatelessWidget {
   }
 }
 
-class _SavedSpotTile extends StatelessWidget {
+class _FavoriteSpotTile extends StatelessWidget {
   final String name;
-  const _SavedSpotTile({required this.name});
+  final VoidCallback onRemove;
+  const _FavoriteSpotTile({required this.name, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
@@ -825,11 +859,12 @@ class _SavedSpotTile extends StatelessWidget {
         Expanded(child: Text(name,
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF00314F)))),
         IconButton(
-          onPressed: () {},
-          icon: const Icon(Icons.bookmark, color: Color(0xFF00BCD4), size: 20),
+          onPressed: onRemove,
+          icon: const Icon(Icons.favorite, color: Color(0xFFFF6B4A), size: 20),
+          tooltip: 'Remove from favorites',
         ),
         FilledButton(
-          onPressed: () {},
+          onPressed: () => Navigator.pushNamed(context, '/booking'),
           style: FilledButton.styleFrom(
             backgroundColor: const Color(0xFF00BCD4),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

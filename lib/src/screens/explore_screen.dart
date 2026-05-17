@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models.dart';
 import '../data/cebu_data.dart';
 import 'home_screen.dart';
@@ -22,6 +23,35 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen> {
   DestinationRegion _selectedRegion = DestinationRegion.all;
   String _searchQuery = '';
+  Set<String> _favorites = {};
+
+  @override
+  void initState() {
+    super.initState();
+    final raw = Supabase.instance.client.auth.currentUser?.userMetadata?['favorites'];
+    if (raw is List) _favorites = raw.cast<String>().toSet();
+  }
+
+  Future<void> _toggleFavorite(String spotName) async {
+    final updated = Set<String>.from(_favorites);
+    if (updated.contains(spotName)) {
+      updated.remove(spotName);
+    } else {
+      updated.add(spotName);
+    }
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(data: {'favorites': updated.toList()}),
+      );
+      if (mounted) setState(() => _favorites = updated);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update favorites.')),
+        );
+      }
+    }
+  }
 
   static const _regions = [
     DestinationRegion.all,
@@ -145,7 +175,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                 mainAxisExtent: cols == 1 ? 350 : 310,
                               ),
                               itemCount: _filtered.length,
-                              itemBuilder: (context, i) => _DestinationGridCard(spot: _filtered[i]),
+                              itemBuilder: (context, i) => _DestinationGridCard(
+                                spot: _filtered[i],
+                                isFavorited: _favorites.contains(_filtered[i].name),
+                                onToggleFavorite: () => _toggleFavorite(_filtered[i].name),
+                              ),
                             );
                           }),
                   ],
@@ -163,7 +197,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
 
 class _DestinationGridCard extends StatefulWidget {
   final Destination spot;
-  const _DestinationGridCard({required this.spot});
+  final bool isFavorited;
+  final VoidCallback onToggleFavorite;
+  const _DestinationGridCard({
+    required this.spot,
+    required this.isFavorited,
+    required this.onToggleFavorite,
+  });
 
   @override
   State<_DestinationGridCard> createState() => _DestinationGridCardState();
@@ -225,13 +265,20 @@ class _DestinationGridCardState extends State<_DestinationGridCard> {
                     ),
                     Positioned(
                       top: 8, right: 8,
-                      child: Container(
-                        width: 32, height: 32,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.25),
-                          shape: BoxShape.circle,
+                      child: GestureDetector(
+                        onTap: widget.onToggleFavorite,
+                        child: Container(
+                          width: 32, height: 32,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.25),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            widget.isFavorited ? Icons.favorite : Icons.favorite_border,
+                            color: widget.isFavorited ? const Color(0xFFFF6B4A) : Colors.white,
+                            size: 16,
+                          ),
                         ),
-                        child: const Icon(Icons.favorite_border, color: Colors.white, size: 16),
                       ),
                     ),
                     Positioned(
