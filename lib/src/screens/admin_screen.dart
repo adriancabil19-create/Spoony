@@ -1050,6 +1050,7 @@ class _ManageHotelsTab extends StatefulWidget {
 class _ManageHotelsTabState extends State<_ManageHotelsTab> {
   bool _loading = true;
   List<Map<String, dynamic>> _hotels = [];
+  double _depositPerGuest = 0;
 
   static const _defaults = <Map<String, dynamic>>[
     {'id': 'acc_budget', 'title': 'Budget Stay', 'category': 'Budget', 'nightly_rate': 1200.0, 'description': 'Hostel-style rooms with local comfort and easy access to the city.', 'is_active': true},
@@ -1070,6 +1071,85 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
     } catch (_) {
       setState(() { _hotels = List.from(_defaults); _loading = false; });
     }
+    try {
+      final dep = await Supabase.instance.client
+          .from('booking_settings')
+          .select('deposit_per_guest')
+          .eq('id', 1)
+          .maybeSingle();
+      if (dep != null && mounted) {
+        setState(() => _depositPerGuest = (dep['deposit_per_guest'] as num?)?.toDouble() ?? 0);
+      }
+    } catch (_) {}
+  }
+
+  void _showDepositDialog() {
+    final ctrl = TextEditingController(text: _depositPerGuest.toStringAsFixed(0));
+    bool saving = false;
+    String? errorMsg;
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => _ModernDialog(
+          title: 'Edit Booking Deposit',
+          body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text(
+              'This amount is collected per guest as a booking deposit. Set to 0 to disable.',
+              style: TextStyle(color: Color(0xFF8B99A6), fontSize: 13),
+            ),
+            const SizedBox(height: 16),
+            if (errorMsg != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.error_outline, size: 16, color: Color(0xFFEF4444)),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text(errorMsg!, style: const TextStyle(fontSize: 12, color: Color(0xFFB91C1C)))),
+                ]),
+              ),
+            ],
+            _DlgField(label: 'DEPOSIT PER GUEST (₱)', controller: ctrl, hint: '0', keyboardType: TextInputType.number),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B)),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: saving ? null : () async {
+                final amount = double.tryParse(ctrl.text);
+                if (amount == null) { setDlg(() => errorMsg = 'Enter a valid number.'); return; }
+                setDlg(() { saving = true; errorMsg = null; });
+                try {
+                  await Supabase.instance.client
+                      .from('booking_settings')
+                      .upsert({'id': 1, 'deposit_per_guest': amount});
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  _load();
+                } catch (e) {
+                  setDlg(() { saving = false; errorMsg = e.toString(); });
+                }
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0EA5E9),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: saving
+                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Save Deposit'),
+            ),
+          ],
+        ),
+      ),
+    ).then((_) => ctrl.dispose());
   }
 
   void _showEditDialog(Map<String, dynamic> hotel) {
@@ -1178,6 +1258,50 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
         const Text('Edit accommodation prices and toggle availability.',
             style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
         const SizedBox(height: 20),
+        // Booking deposit setting card
+        Container(
+          margin: const EdgeInsets.only(bottom: 20),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: const Color(0xFF0EA5E9).withValues(alpha: 0.3)),
+          ),
+          child: Row(children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0EA5E9).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.payment_outlined, color: Color(0xFF0EA5E9), size: 26),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Booking Deposit',
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                const SizedBox(height: 4),
+                const Text('Upfront deposit collected per guest at booking.',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF8B99A6))),
+                const SizedBox(height: 6),
+                Text(
+                  _depositPerGuest > 0 ? '₱${_depositPerGuest.toStringAsFixed(0)} per guest' : 'No deposit set',
+                  style: TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w800,
+                    color: _depositPerGuest > 0 ? const Color(0xFF50C878) : const Color(0xFF8B99A6),
+                  ),
+                ),
+              ]),
+            ),
+            TextButton.icon(
+              onPressed: _showDepositDialog,
+              icon: const Icon(Icons.edit, size: 16),
+              label: const Text('Edit Deposit'),
+              style: TextButton.styleFrom(foregroundColor: const Color(0xFF006994)),
+            ),
+          ]),
+        ),
         if (_loading)
           const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
         else

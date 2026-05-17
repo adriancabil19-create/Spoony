@@ -24,12 +24,47 @@ class _ExploreScreenState extends State<ExploreScreen> {
   DestinationRegion _selectedRegion = DestinationRegion.all;
   String _searchQuery = '';
   Set<String> _favorites = {};
+  List<Destination> _destinations = cebuDestinations;
 
   @override
   void initState() {
     super.initState();
     final raw = Supabase.instance.client.auth.currentUser?.userMetadata?['favorites'];
     if (raw is List) _favorites = raw.cast<String>().toSet();
+    _loadDestinations();
+  }
+
+  Future<void> _loadDestinations() async {
+    try {
+      final data = await Supabase.instance.client.from('destinations').select();
+      final dbList = (data as List).cast<Map<String, dynamic>>();
+      if (!mounted || dbList.isEmpty) return;
+      final merged = cebuDestinations.map((d) {
+        final db = dbList.firstWhere(
+          (row) => (row['name'] as String).toLowerCase() == d.name.toLowerCase(),
+          orElse: () => {},
+        );
+        if (db.isEmpty) return d;
+        final fee = (db['entrance_fee'] as num?)?.toDouble() ?? d.entranceFee;
+        final imgs = (db['image_urls'] as List?)?.isNotEmpty == true
+            ? (db['image_urls'] as List).cast<String>()
+            : d.images;
+        return Destination(
+          id: db['id'] as String? ?? d.id,
+          name: db['name'] as String? ?? d.name,
+          description: db['description'] as String? ?? d.description,
+          region: d.region,
+          images: imgs,
+          entranceFee: fee,
+          rating: (db['rating'] as num?)?.toDouble() ?? d.rating,
+          reviews: d.reviews,
+          coordinates: d.coordinates,
+          travelTime: d.travelTime,
+          averageDistanceKm: d.averageDistanceKm,
+        );
+      }).toList();
+      setState(() => _destinations = merged);
+    } catch (_) {}
   }
 
   Future<void> _toggleFavorite(String spotName) async {
@@ -61,7 +96,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     DestinationRegion.bohol,
   ];
 
-  List<Destination> get _filtered => cebuDestinations.where((spot) {
+  List<Destination> get _filtered => _destinations.where((spot) {
         final matchesRegion =
             _selectedRegion == DestinationRegion.all || spot.region == _selectedRegion;
         final matchesSearch = _searchQuery.isEmpty ||

@@ -39,6 +39,9 @@ class _BookingScreenState extends State<BookingScreen> {
 
   List<AccommodationOption> _accommodations = accommodations;
   List<TransportOption> _transports = transports;
+  bool _useCustomPlan = false;
+  List<_DayPlan> _dayPlans = [];
+  double _depositPerGuest = 0;
 
   @override
   void initState() {
@@ -65,8 +68,25 @@ class _BookingScreenState extends State<BookingScreen> {
           return TransportOption(id: t.id, title: t.title, description: t.description, price: price);
         }).toList();
       });
-    } catch (_) {
-      // Keep hardcoded fallback — no-op
+    } catch (_) {}
+    try {
+      final dep = await Supabase.instance.client
+          .from('booking_settings')
+          .select('deposit_per_guest')
+          .eq('id', 1)
+          .maybeSingle();
+      if (dep != null && mounted) {
+        setState(() => _depositPerGuest = (dep['deposit_per_guest'] as num?)?.toDouble() ?? 0);
+      }
+    } catch (_) {}
+  }
+
+  void _syncDayPlans() {
+    final n = _nights;
+    if (_dayPlans.length < n) {
+      _dayPlans = [..._dayPlans, ...List.generate(n - _dayPlans.length, (_) => _DayPlan())];
+    } else {
+      _dayPlans = _dayPlans.take(n).toList();
     }
   }
 
@@ -92,18 +112,28 @@ class _BookingScreenState extends State<BookingScreen> {
     return ppx * _guestCount;
   }
 
+  double get _customSpotsTotal => _dayPlans.fold(0.0, (sum, day) =>
+      sum + cebuDestinations
+          .where((d) => day.spotIds.contains(d.id))
+          .fold(0.0, (s, d) => s + d.entranceFee * _guestCount));
+
   double get _addOnsTotal => tourAddOns
       .where((a) => _selectedAddOnIds.contains(a.id))
       .fold(0.0, (sum, a) => sum + (a.perPerson ? a.price * _guestCount : a.price));
 
   double get _accTotal => _accommodation.nightlyRate * _guestCount * _nights;
   double get _transTotal => _transport.price;
-  double get _grandTotal => _pkgTotal + _addOnsTotal + _accTotal + _transTotal;
+  double get _grandTotal {
+    final base = _useCustomPlan ? _customSpotsTotal : _pkgTotal;
+    return base + _addOnsTotal + _accTotal + _transTotal + _depositPerGuest * _guestCount;
+  }
 
   bool _canProceed() {
     switch (_step) {
       case 1: return _startDate != null && _endDate != null;
-      case 2: return _packageId != null;
+      case 2:
+        if (_useCustomPlan) return _dayPlans.any((d) => d.spotIds.isNotEmpty);
+        return _packageId != null;
       default: return true;
     }
   }
@@ -124,6 +154,7 @@ class _BookingScreenState extends State<BookingScreen> {
       } else {
         _endDate = picked;
       }
+      _syncDayPlans();
     });
   }
 
@@ -135,7 +166,8 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _completeBooking() async {
-    if (_pkg == null || _startDate == null || _endDate == null) return;
+    if (_startDate == null || _endDate == null) return;
+    if (!_useCustomPlan && _pkg == null) return;
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -357,15 +389,24 @@ class _BookingScreenState extends State<BookingScreen> {
             icon: _tourType == TourType.joiner ? Icons.group_outlined : Icons.star_outlined,
             label: _tourType == TourType.joiner ? 'Joiner Tour' : 'Premium Exclusive',
           ),
-          if (pkg != null)
+          if (_useCustomPlan)
+            _SummaryRow(
+              icon: Icons.map_outlined,
+              label: 'Build Your Own · ${_dayPlans.where((d) => d.spotIds.isNotEmpty).length} day(s) planned',
+            )
+          else if (pkg != null)
             _SummaryRow(icon: Icons.tour_rounded, label: pkg.name),
           const Divider(height: 28),
-          if (pkg != null)
+          if (_useCustomPlan && _customSpotsTotal > 0)
+            _SummaryCostRow(label: 'Custom destinations', value: '₱${_customSpotsTotal.toStringAsFixed(0)}')
+          else if (pkg != null)
             _SummaryCostRow(label: 'Package', value: '₱${_pkgTotal.toStringAsFixed(0)}'),
           _SummaryCostRow(label: 'Accommodation', value: '₱${_accTotal.toStringAsFixed(0)}'),
           _SummaryCostRow(label: 'Transport', value: '₱${_transTotal.toStringAsFixed(0)}'),
           if (_addOnsTotal > 0)
             _SummaryCostRow(label: 'Add-ons', value: '₱${_addOnsTotal.toStringAsFixed(0)}'),
+          if (_depositPerGuest > 0)
+            _SummaryCostRow(label: 'Deposit', value: '₱${(_depositPerGuest * _guestCount).toStringAsFixed(0)}'),
           const Divider(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -465,6 +506,22 @@ class _BookingScreenState extends State<BookingScreen> {
                 ),
               ),
             ]),
+            if (_depositPerGuest > 0) ...[
+              const SizedBox(height: 20),
+              const Divider(color: Color(0xFFE2E8F0)),
+              const SizedBox(height: 14),
+              Row(children: [
+                const Icon(Icons.payment_outlined, color: _kOcean, size: 18),
+                const SizedBox(width: 8),
+                const Expanded(child: Text('Booking Deposit',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark))),
+                Text('₱${(_depositPerGuest * _guestCount).toStringAsFixed(0)}',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _kOcean)),
+              ]),
+              const SizedBox(height: 4),
+              Text('₱${_depositPerGuest.toStringAsFixed(0)} × $_guestCount guest${_guestCount > 1 ? 's' : ''} — collected upfront',
+                  style: const TextStyle(fontSize: 12, color: _kMid)),
+            ],
             if (_startDate != null && _endDate != null) ...[
               const SizedBox(height: 20),
               _buildSummaryBar(),
@@ -475,45 +532,217 @@ class _BookingScreenState extends State<BookingScreen> {
     );
   }
 
-  // ── Step 2: Package Selection ────────────────────────────────────────────
+  // ── Step 2: Experience Selection ─────────────────────────────────────────
 
   Widget _buildPackageStep() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          _tourType == TourType.joiner ? 'Joiner Tour Packages' : 'Premium Exclusive Packages',
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _kDark),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          _tourType == TourType.joiner
-              ? 'Travel with fellow adventurers — great value, great fun.'
-              : 'Your group only — fully private and personalised.',
-          style: const TextStyle(fontSize: 13, color: _kMid),
-        ),
-        const SizedBox(height: 14),
-        Expanded(
-          child: ListView.separated(
-            itemCount: tourPackages.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 14),
-            itemBuilder: (ctx, i) {
-              final pkg = tourPackages[i];
-              final selected = pkg.id == _packageId;
-              final price = _tourType == TourType.joiner
-                  ? pkg.joinerPricePerPerson
-                  : pkg.premiumPricePerPerson;
-              return _PackageCard(
-                package: pkg,
-                price: price,
-                selected: selected,
-                tourType: _tourType,
-                onTap: () => setState(() => _packageId = pkg.id),
-              );
-            },
+        const Text('Choose Your Experience',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _kDark)),
+        const SizedBox(height: 12),
+        Row(children: [
+          Expanded(child: _ModeToggle(
+            label: 'Tour Package',
+            icon: Icons.tour_rounded,
+            selected: !_useCustomPlan,
+            color: _kOcean,
+            description: 'Curated package for the whole trip.',
+            onTap: () => setState(() => _useCustomPlan = false),
+          )),
+          const SizedBox(width: 12),
+          Expanded(child: _ModeToggle(
+            label: 'Build Your Own',
+            icon: Icons.map_outlined,
+            selected: _useCustomPlan,
+            color: _kTeal,
+            description: 'Pick destinations per day, your way.',
+            onTap: () => setState(() => _useCustomPlan = true),
+          )),
+        ]),
+        const SizedBox(height: 16),
+        if (!_useCustomPlan) ...[
+          Text(
+            _tourType == TourType.joiner ? 'Joiner Tour Packages' : 'Premium Exclusive Packages',
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _kDark),
           ),
-        ),
+          const SizedBox(height: 10),
+          Expanded(
+            child: ListView.separated(
+              itemCount: tourPackages.length,
+              separatorBuilder: (_, _) => const SizedBox(height: 14),
+              itemBuilder: (ctx, i) {
+                final pkg = tourPackages[i];
+                final selected = pkg.id == _packageId;
+                final price = _tourType == TourType.joiner
+                    ? pkg.joinerPricePerPerson : pkg.premiumPricePerPerson;
+                return _PackageCard(
+                  package: pkg, price: price, selected: selected,
+                  tourType: _tourType, onTap: () => setState(() => _packageId = pkg.id),
+                );
+              },
+            ),
+          ),
+        ] else ...[
+          Expanded(child: _buildCustomDayPlan()),
+        ],
       ],
+    );
+  }
+
+  Widget _buildCustomDayPlan() {
+    if (_nights == 0 || (_startDate == null || _endDate == null)) {
+      return const Center(
+        child: Text('Please select your travel dates in Step 1.',
+            style: TextStyle(color: _kMid)),
+      );
+    }
+    return ListView.builder(
+      itemCount: _nights,
+      itemBuilder: (context, dayIndex) {
+        final day = dayIndex < _dayPlans.length ? _dayPlans[dayIndex] : _DayPlan();
+        return _buildDayCard(dayIndex, day);
+      },
+    );
+  }
+
+  static const _dayRegions = [
+    (DestinationRegion.cebuCity,  'Cebu City'),
+    (DestinationRegion.northCebu, 'North Cebu'),
+    (DestinationRegion.southCebu, 'South Cebu'),
+    (DestinationRegion.bohol,     'Bohol / Islands'),
+  ];
+
+  Widget _buildDayCard(int dayIndex, _DayPlan day) {
+    final spotsForRegion = day.region == null
+        ? <Destination>[]
+        : cebuDestinations.where((d) => d.region == day.region).toList();
+
+    final dayTotal = cebuDestinations
+        .where((d) => day.spotIds.contains(d.id))
+        .fold(0.0, (s, d) => s + d.entranceFee * _guestCount);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: day.spotIds.isNotEmpty ? _kTeal.withValues(alpha: 0.5) : const Color(0xFFE2E8F0),
+          width: day.spotIds.isNotEmpty ? 1.5 : 1,
+        ),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [_kOcean, _kTeal]),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text('Day ${dayIndex + 1}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+            ),
+            const SizedBox(width: 10),
+            if (day.spotIds.isNotEmpty) ...[
+              Text('${day.spotIds.length} spot${day.spotIds.length > 1 ? 's' : ''}',
+                  style: const TextStyle(fontSize: 12, color: _kTeal, fontWeight: FontWeight.w600)),
+              const Spacer(),
+              Text('₱${dayTotal.toStringAsFixed(0)}',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _kTeal)),
+            ],
+          ]),
+          const SizedBox(height: 12),
+          const Text('REGION', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _kMid, letterSpacing: 0.5)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8, runSpacing: 8,
+            children: _dayRegions.map((r) {
+              final (regionEnum, label) = r;
+              final sel = day.region == regionEnum;
+              return GestureDetector(
+                onTap: () => setState(() {
+                  while (_dayPlans.length <= dayIndex) { _dayPlans.add(_DayPlan()); }
+                  _dayPlans[dayIndex] = _dayPlans[dayIndex].withRegion(regionEnum);
+                }),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: sel ? _kOcean : Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: sel ? _kOcean : const Color(0xFFE2E8F0)),
+                  ),
+                  child: Text(label, style: TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600,
+                    color: sel ? Colors.white : _kMid,
+                  )),
+                ),
+              );
+            }).toList(),
+          ),
+          if (day.region != null) ...[
+            const SizedBox(height: 14),
+            const Text('DESTINATIONS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: _kMid, letterSpacing: 0.5)),
+            const SizedBox(height: 8),
+            if (spotsForRegion.isEmpty)
+              const Text('No destinations in this region.', style: TextStyle(color: _kMid, fontSize: 12))
+            else
+              ...spotsForRegion.map((spot) {
+                final sel = day.spotIds.contains(spot.id);
+                return GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      while (_dayPlans.length <= dayIndex) { _dayPlans.add(_DayPlan()); }
+                      final updated = Set<String>.from(_dayPlans[dayIndex].spotIds);
+                      sel ? updated.remove(spot.id) : updated.add(spot.id);
+                      _dayPlans[dayIndex] = _dayPlans[dayIndex].withSpots(updated);
+                    });
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: sel ? _kTeal.withValues(alpha: 0.07) : Colors.white.withValues(alpha: 0.6),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: sel ? _kTeal : const Color(0xFFE2E8F0), width: sel ? 1.5 : 1),
+                    ),
+                    child: Row(children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        width: 20, height: 20,
+                        decoration: BoxDecoration(
+                          color: sel ? _kTeal : Colors.transparent,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: sel ? _kTeal : const Color(0xFFCBD5E1)),
+                        ),
+                        child: sel ? const Icon(Icons.check, color: Colors.white, size: 12) : null,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(spot.name, style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700,
+                          color: sel ? _kTeal : _kDark,
+                        )),
+                        Text(
+                          spot.entranceFee == 0 ? 'Free entrance' : '₱${spot.entranceFee.toInt()} / person',
+                          style: const TextStyle(fontSize: 11, color: _kMid),
+                        ),
+                      ])),
+                      if (sel)
+                        Text('₱${(spot.entranceFee * _guestCount).toStringAsFixed(0)}',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kTeal)),
+                    ]),
+                  ),
+                );
+              }),
+          ],
+        ]),
+      ),
     );
   }
 
@@ -636,7 +865,8 @@ class _BookingScreenState extends State<BookingScreen> {
             const Text('Review & confirm',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _kDark)),
             const SizedBox(height: 20),
-            if (pkg != null) ...[
+            // Experience summary header
+            if (!_useCustomPlan && pkg != null) ...[
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -647,17 +877,37 @@ class _BookingScreenState extends State<BookingScreen> {
                 child: Row(children: [
                   const Icon(Icons.tour_rounded, color: _kOcean, size: 26),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(pkg.name,
-                          style: const TextStyle(fontWeight: FontWeight.w800, color: _kOcean)),
-                      Text(
-                        '${pkg.durationDays}-day · ${pkg.region} · '
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(pkg.name, style: const TextStyle(fontWeight: FontWeight.w800, color: _kOcean)),
+                    Text('${pkg.durationDays}-day · ${pkg.region} · '
                         '${_tourType == TourType.joiner ? 'Joiner Tour' : 'Premium Exclusive'}',
-                        style: const TextStyle(fontSize: 12, color: _kMid),
-                      ),
-                    ]),
-                  ),
+                        style: const TextStyle(fontSize: 12, color: _kMid)),
+                  ])),
+                ]),
+              ),
+              const SizedBox(height: 16),
+            ] else if (_useCustomPlan) ...[
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: _kTeal.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _kTeal.withValues(alpha: 0.2)),
+                ),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Row(children: [
+                    Icon(Icons.map_outlined, color: _kTeal, size: 20),
+                    SizedBox(width: 8),
+                    Text('Build Your Own — Day Plan', style: TextStyle(fontWeight: FontWeight.w800, color: _kTeal)),
+                  ]),
+                  const SizedBox(height: 8),
+                  for (int i = 0; i < _dayPlans.length; i++) ...[
+                    if (_dayPlans[i].spotIds.isNotEmpty) ...[
+                      Text('Day ${i + 1}: ${cebuDestinations.where((d) => _dayPlans[i].spotIds.contains(d.id)).map((d) => d.name).join(', ')}',
+                          style: const TextStyle(fontSize: 12, color: _kMid)),
+                      const SizedBox(height: 2),
+                    ],
+                  ],
                 ]),
               ),
               const SizedBox(height: 16),
@@ -668,35 +918,28 @@ class _BookingScreenState extends State<BookingScreen> {
                   '${_endDate != null ? fmt.format(_endDate!) : '—'}',
             ),
             _SummaryTile(label: 'Guests', value: '$_guestCount person(s) · $_nights night(s)'),
-            _SummaryTile(
-              label: 'Tour type',
-              value: _tourType == TourType.joiner ? 'Joiner Tour' : 'Premium Exclusive',
-            ),
-            _SummaryTile(label: 'Package', value: pkg?.name ?? '—'),
+            if (!_useCustomPlan) ...[
+              _SummaryTile(label: 'Tour type', value: _tourType == TourType.joiner ? 'Joiner Tour' : 'Premium Exclusive'),
+              _SummaryTile(label: 'Package', value: pkg?.name ?? '—'),
+            ],
             _SummaryTile(label: 'Accommodation', value: _accommodation.title),
             _SummaryTile(label: 'Transport', value: _transport.title),
             if (_selectedAddOnIds.isNotEmpty)
               _SummaryTile(
                 label: 'Add-ons',
-                value: tourAddOns
-                    .where((a) => _selectedAddOnIds.contains(a.id))
-                    .map((a) => a.title)
-                    .join(', '),
+                value: tourAddOns.where((a) => _selectedAddOnIds.contains(a.id)).map((a) => a.title).join(', '),
               ),
+            if (_depositPerGuest > 0)
+              _SummaryTile(label: 'Deposit', value: '₱${(_depositPerGuest * _guestCount).toStringAsFixed(0)}'),
             const SizedBox(height: 16),
-            const Text('Payment method',
-                style: TextStyle(fontWeight: FontWeight.w700, color: _kDark)),
+            const Text('Payment method', style: TextStyle(fontWeight: FontWeight.w700, color: _kDark)),
             const SizedBox(height: 12),
-            const Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                _PaymentChip(label: 'GCash'),
-                _PaymentChip(label: 'Maya'),
-                _PaymentChip(label: 'Card'),
-                _PaymentChip(label: 'Bank Transfer'),
-              ],
-            ),
+            const Wrap(spacing: 12, runSpacing: 12, children: [
+              _PaymentChip(label: 'GCash'),
+              _PaymentChip(label: 'Maya'),
+              _PaymentChip(label: 'Card'),
+              _PaymentChip(label: 'Bank Transfer'),
+            ]),
             const SizedBox(height: 20),
             _buildCostBreakdown(),
           ],
@@ -728,6 +971,27 @@ class _BookingScreenState extends State<BookingScreen> {
 
   Widget _buildCostBreakdown() {
     final pkg = _pkg;
+    final experienceLines = <Widget>[];
+    if (_useCustomPlan) {
+      for (int i = 0; i < _dayPlans.length; i++) {
+        if (_dayPlans[i].spotIds.isNotEmpty) {
+          final spots = cebuDestinations.where((d) => _dayPlans[i].spotIds.contains(d.id)).toList();
+          final dayTotal = spots.fold(0.0, (s, d) => s + d.entranceFee * _guestCount);
+          experienceLines.add(_BreakdownLine(
+            label: 'Day ${i + 1} destinations',
+            value: '₱${dayTotal.toStringAsFixed(0)}',
+            sub: '${spots.length} spot${spots.length > 1 ? 's' : ''} × $_guestCount pax',
+          ));
+        }
+      }
+    } else if (pkg != null) {
+      experienceLines.add(_BreakdownLine(
+        label: 'Package (${pkg.name})',
+        value: '₱${_pkgTotal.toStringAsFixed(0)}',
+        sub: '₱${(_tourType == TourType.joiner ? pkg.joinerPricePerPerson : pkg.premiumPricePerPerson).toStringAsFixed(0)} × $_guestCount pax',
+      ));
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -736,12 +1000,7 @@ class _BookingScreenState extends State<BookingScreen> {
         const Text('Cost breakdown',
             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13, color: _kMid)),
         const SizedBox(height: 10),
-        if (pkg != null)
-          _BreakdownLine(
-            label: 'Package (${pkg.name})',
-            value: '₱${_pkgTotal.toStringAsFixed(0)}',
-            sub: '₱${(_tourType == TourType.joiner ? pkg.joinerPricePerPerson : pkg.premiumPricePerPerson).toStringAsFixed(0)} × $_guestCount pax',
-          ),
+        ...experienceLines,
         if (_addOnsTotal > 0)
           _BreakdownLine(label: 'Add-ons', value: '₱${_addOnsTotal.toStringAsFixed(0)}'),
         _BreakdownLine(
@@ -753,6 +1012,12 @@ class _BookingScreenState extends State<BookingScreen> {
           label: 'Transport (${_transport.title})',
           value: '₱${_transTotal.toStringAsFixed(0)}',
         ),
+        if (_depositPerGuest > 0)
+          _BreakdownLine(
+            label: 'Booking Deposit',
+            value: '₱${(_depositPerGuest * _guestCount).toStringAsFixed(0)}',
+            sub: '₱${_depositPerGuest.toStringAsFixed(0)} × $_guestCount guest${_guestCount > 1 ? 's' : ''}',
+          ),
         const Divider(height: 20, color: Color(0xFFE2E8F0)),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1330,6 +1595,66 @@ class _PaymentChip extends StatelessWidget {
       backgroundColor: _kOcean.withValues(alpha: 0.08),
       side: BorderSide(color: _kOcean.withValues(alpha: 0.2)),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    );
+  }
+}
+
+// ── Day plan model ────────────────────────────────────────────────────────────
+
+class _DayPlan {
+  final DestinationRegion? region;
+  final Set<String> spotIds;
+  _DayPlan({this.region, Set<String>? spotIds}) : spotIds = spotIds ?? {};
+  _DayPlan withRegion(DestinationRegion r) => _DayPlan(region: r, spotIds: {});
+  _DayPlan withSpots(Set<String> s) => _DayPlan(region: region, spotIds: s);
+}
+
+// ── Mode toggle card ──────────────────────────────────────────────────────────
+
+class _ModeToggle extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final Color color;
+  final String description;
+  final VoidCallback onTap;
+  const _ModeToggle({
+    required this.label, required this.icon, required this.selected,
+    required this.color, required this.description, required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: selected ? color.withValues(alpha: 0.08) : Colors.white.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: selected ? color : const Color(0xFFE2E8F0), width: selected ? 2 : 1),
+          boxShadow: selected
+              ? [BoxShadow(color: color.withValues(alpha: 0.15), blurRadius: 10, offset: const Offset(0, 3))]
+              : [],
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Icon(icon, color: color, size: 20),
+            const SizedBox(width: 8),
+            if (selected)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(10)),
+                child: const Text('Selected', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+              ),
+          ]),
+          const SizedBox(height: 8),
+          Text(label, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: color)),
+          const SizedBox(height: 2),
+          Text(description, style: const TextStyle(fontSize: 11, color: _kMid, height: 1.3)),
+        ]),
+      ),
     );
   }
 }
