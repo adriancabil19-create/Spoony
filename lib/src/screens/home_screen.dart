@@ -157,6 +157,8 @@ class _StickyNavState extends State<_StickyNav> {
     super.dispose();
   }
 
+  bool get _isAdmin => _user?.appMetadata['role'] == 'admin';
+
   String _initials(User user) {
     final raw = user.userMetadata?['name'] as String? ??
         user.userMetadata?['full_name'] as String? ??
@@ -217,6 +219,9 @@ class _StickyNavState extends State<_StickyNav> {
                   onTap: () => Navigator.pushNamed(context, BookingScreen.routeName)),
               _NavLink(label: 'Dashboard', textColor: textColor, active: false,
                   onTap: () => Navigator.pushNamed(context, DashboardScreen.routeName)),
+              if (_isAdmin)
+                _NavLink(label: 'Admin', textColor: textColor, active: false,
+                    onTap: () => Navigator.pushNamed(context, AdminScreen.routeName)),
               const SizedBox(width: 20),
               if (_user != null) ...[
                 CircleAvatar(
@@ -299,6 +304,9 @@ class _StickyNavState extends State<_StickyNav> {
                   onTap: () { Navigator.pop(context); Navigator.pushNamed(context, BookingScreen.routeName); }),
               _MobileNavItem(label: 'Dashboard', icon: Icons.dashboard_outlined, active: false,
                   onTap: () { Navigator.pop(context); Navigator.pushNamed(context, DashboardScreen.routeName); }),
+              if (_isAdmin)
+                _MobileNavItem(label: 'Admin Panel', icon: Icons.admin_panel_settings_outlined, active: false,
+                    onTap: () { Navigator.pop(context); Navigator.pushNamed(context, AdminScreen.routeName); }),
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),

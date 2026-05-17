@@ -158,14 +158,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
-  // Fallback: supabase_flutter processes the ?code= during initialize() (before
-  // AuthScreen builds), so the passwordRecovery event fires into an empty stream
-  // and is lost. We detect it here by decoding the JWT's amr claim.
+  // Fallback: supabase_flutter processes the recovery token during initialize()
+  // (before AuthScreen builds), so the passwordRecovery event fires into an
+  // empty stream and is lost. On mobile the browser also clears ?code= from
+  // the URL before we can read it. Detect recovery by decoding the JWT amr claim.
   void _checkInitialState() {
     if (_isPasswordRecovery) return;
     final session = Supabase.instance.client.auth.currentSession;
     if (session == null) return;
-    if (!Uri.base.queryParameters.containsKey('code')) return;
     try {
       final parts = session.accessToken.split('.');
       if (parts.length < 2) return;

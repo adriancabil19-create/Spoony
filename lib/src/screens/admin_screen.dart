@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/cebu_data.dart';
 import 'home_screen.dart';
-import 'auth_screen.dart';
 
 const _accLabels = {
   'acc_budget': 'Budget Stay',
@@ -50,11 +49,6 @@ class _AdminScreenState extends State<AdminScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = Supabase.instance.client.auth.currentUser;
-    final name = user?.userMetadata?['name'] as String? ??
-        user?.userMetadata?['full_name'] as String? ??
-        user?.email ?? 'Admin';
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7F8),
       body: LayoutBuilder(
@@ -66,66 +60,7 @@ class _AdminScreenState extends State<AdminScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
             // ── Header ────────────────────────────────────────────────────
-            Container(
-              color: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  GestureDetector(
-                    onTap: () =>
-                        Navigator.pushReplacementNamed(context, HomeScreen.routeName),
-                    child: const Row(children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: Color(0xFF00BCD4),
-                        child: Icon(Icons.public, color: Colors.white, size: 18),
-                      ),
-                      SizedBox(width: 8),
-                      Text('Spoony Admin',
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF006994))),
-                    ]),
-                  ),
-                  Row(children: [
-                    Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0F7FA),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(name,
-                          style: const TextStyle(
-                              color: Color(0xFF006994),
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13)),
-                    ),
-                    const SizedBox(width: 12),
-                    FilledButton.icon(
-                      onPressed: () async {
-                        await Supabase.instance.client.auth.signOut();
-                        if (context.mounted) {
-                          Navigator.pushReplacementNamed(
-                              context, AuthScreen.routeName);
-                        }
-                      },
-                      icon: const Icon(Icons.logout, size: 16),
-                      label: const Text('Sign Out'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF6B4A),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 10),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                  ]),
-                ],
-              ),
-            ),
+            SpoonyNavBar(current: 'admin'),
 
             // ── Body ──────────────────────────────────────────────────────
             Expanded(child: LayoutBuilder(builder: (ctx, constraints) {
