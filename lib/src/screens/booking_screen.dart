@@ -493,6 +493,138 @@ class _BookingScreenState extends State<BookingScreen> {
                 ),
               ),
             ]),
+            const SizedBox(height: 26),
+            const Divider(color: Color(0xFFE2E8F0)),
+            const SizedBox(height: 20),
+            // ── Accommodation ─────────────────────────────────────────────
+            Row(children: [
+              const Icon(Icons.hotel_rounded, color: _kOcean, size: 18),
+              const SizedBox(width: 8),
+              const Text('Accommodation',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _kDark)),
+            ]),
+            const SizedBox(height: 4),
+            const Text('Nightly rate × guests × nights.',
+                style: TextStyle(fontSize: 12, color: _kMid)),
+            const SizedBox(height: 12),
+            for (final a in _accommodations) ...[
+              GestureDetector(
+                onTap: () => setState(() => _accommodationId = a.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _accommodationId == a.id
+                        ? _kOcean.withValues(alpha: 0.07)
+                        : Colors.white.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _accommodationId == a.id ? _kOcean : const Color(0xFFE2E8F0),
+                      width: _accommodationId == a.id ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      width: 20, height: 20,
+                      decoration: BoxDecoration(
+                        color: _accommodationId == a.id ? _kOcean : Colors.transparent,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _accommodationId == a.id ? _kOcean : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                      child: _accommodationId == a.id
+                          ? const Icon(Icons.check, color: Colors.white, size: 12)
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(a.title, style: TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 14,
+                        color: _accommodationId == a.id ? _kOcean : _kDark,
+                      )),
+                      Text(a.description,
+                          style: const TextStyle(fontSize: 11, color: _kMid),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ])),
+                    const SizedBox(width: 10),
+                    Text('₱${a.nightlyRate.toInt()}/night',
+                        style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700,
+                          color: _accommodationId == a.id ? _kOcean : _kMid,
+                        )),
+                  ]),
+                ),
+              ),
+            ],
+            const SizedBox(height: 10),
+            const Divider(color: Color(0xFFE2E8F0)),
+            const SizedBox(height: 20),
+            // ── Transport ─────────────────────────────────────────────────
+            Row(children: [
+              const Icon(Icons.directions_car_rounded, color: _kTeal, size: 18),
+              const SizedBox(width: 8),
+              const Text('Transport',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _kDark)),
+            ]),
+            const SizedBox(height: 4),
+            const Text('One-way trip price.',
+                style: TextStyle(fontSize: 12, color: _kMid)),
+            const SizedBox(height: 12),
+            for (final t in _transports) ...[
+              GestureDetector(
+                onTap: () => setState(() => _transportId = t.id),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _transportId == t.id
+                        ? _kTeal.withValues(alpha: 0.07)
+                        : Colors.white.withValues(alpha: 0.7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _transportId == t.id ? _kTeal : const Color(0xFFE2E8F0),
+                      width: _transportId == t.id ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      width: 20, height: 20,
+                      decoration: BoxDecoration(
+                        color: _transportId == t.id ? _kTeal : Colors.transparent,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: _transportId == t.id ? _kTeal : const Color(0xFFCBD5E1),
+                        ),
+                      ),
+                      child: _transportId == t.id
+                          ? const Icon(Icons.check, color: Colors.white, size: 12)
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(t.title, style: TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 14,
+                        color: _transportId == t.id ? _kTeal : _kDark,
+                      )),
+                      Text(t.description,
+                          style: const TextStyle(fontSize: 11, color: _kMid),
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ])),
+                    const SizedBox(width: 10),
+                    Text('₱${t.price.toInt()}',
+                        style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700,
+                          color: _transportId == t.id ? _kTeal : _kMid,
+                        )),
+                  ]),
+                ),
+              ),
+            ],
             if (_startDate != null && _endDate != null) ...[
               const SizedBox(height: 20),
               _buildSummaryBar(),
