@@ -192,7 +192,14 @@ class _AdminScreenState extends State<AdminScreen> {
               );
             })),
 
-            const SpoonyFooter(),
+            Container(
+              color: const Color(0xFF0F172A),
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+              child: const Center(
+                child: Text('© 2026 Spoony Travel and Tours. All rights reserved.',
+                    style: TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+              ),
+            ),
                 ],
               ),
             ),
