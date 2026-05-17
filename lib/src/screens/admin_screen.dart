@@ -1075,51 +1075,70 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
   void _showEditDialog(Map<String, dynamic> hotel) {
     final rateCtrl = TextEditingController(
         text: (hotel['nightly_rate'] as num?)?.toStringAsFixed(0) ?? '0');
+    bool saving = false;
+    String? errorMsg;
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Edit Price — ${hotel['title']}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => _ModernDialog(
+          title: 'Edit Price — ${hotel['title']}',
+          body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(hotel['description'] as String? ?? '',
                 style: const TextStyle(color: Color(0xFF8B99A6), fontSize: 13)),
             const SizedBox(height: 16),
-            TextField(
-              controller: rateCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Nightly Rate (₱)',
-                border: OutlineInputBorder(),
-                prefixText: '₱ ',
+            if (errorMsg != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.error_outline, size: 16, color: Color(0xFFEF4444)),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text(errorMsg!, style: const TextStyle(fontSize: 12, color: Color(0xFFB91C1C)))),
+                ]),
               ),
+            ],
+            _DlgField(label: 'NIGHTLY RATE (₱)', controller: rateCtrl, hint: '0', keyboardType: TextInputType.number),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B)),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: saving ? null : () async {
+                final rate = double.tryParse(rateCtrl.text);
+                if (rate == null) { setDlg(() => errorMsg = 'Enter a valid number.'); return; }
+                setDlg(() { saving = true; errorMsg = null; });
+                try {
+                  await Supabase.instance.client
+                      .from('accommodation_types')
+                      .update({'nightly_rate': rate})
+                      .eq('id', hotel['id'] as String);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  _load();
+                } catch (e) {
+                  setDlg(() { saving = false; errorMsg = e.toString(); });
+                }
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0EA5E9),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: saving
+                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Save Price'),
             ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () async {
-              final rate = double.tryParse(rateCtrl.text);
-              if (rate == null) return;
-              Navigator.pop(context);
-              try {
-                await Supabase.instance.client
-                    .from('accommodation_types')
-                    .update({'nightly_rate': rate})
-                    .eq('id', hotel['id'] as String);
-                _load();
-              } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-              }
-            },
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF006994)),
-            child: const Text('Save'),
-          ),
-        ],
       ),
-    );
+    ).then((_) => rateCtrl.dispose());
   }
 
   Future<void> _toggleActive(Map<String, dynamic> hotel) async {
@@ -1324,9 +1343,9 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
     final premiumCtrl = TextEditingController(
         text: (existing?['premium_price'] as num?)?.toStringAsFixed(0) ?? '');
     final imgCtrl = TextEditingController(text: existing?['image_url'] as String? ?? '');
-    final highlights = (existing?['highlights'] as List?)
-        ?.map((h) => h.toString()).toList() ?? [];
-    final highlightsCtrl = TextEditingController(text: highlights.join(', '));
+    final existingHighlights = (existing?['highlights'] as List?)
+        ?.map((h) => h.toString()).toSet() ?? <String>{};
+    var selectedSpots = Set<String>.from(existingHighlights);
 
     String region = existing?['region'] as String? ?? _regionOptions.first;
     if (!_regionOptions.contains(region)) region = _regionOptions.first;
@@ -1422,7 +1441,32 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
             const SizedBox(height: 14),
             _DlgField(label: 'IMAGE URL', controller: imgCtrl, hint: 'https://example.com/image.jpg'),
             const SizedBox(height: 14),
-            _DlgField(label: 'HIGHLIGHTS (comma-separated)', controller: highlightsCtrl, hint: 'Kawasan Falls, Whale Shark Watching', maxLines: 2),
+            const Text('INCLUDED SPOTS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B), letterSpacing: 0.2)),
+            const SizedBox(height: 6),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: cebuDestinations.map((d) {
+                  final checked = selectedSpots.contains(d.name);
+                  return CheckboxListTile(
+                    value: checked,
+                    dense: true,
+                    activeColor: const Color(0xFF0EA5E9),
+                    title: Text(d.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF00314F))),
+                    subtitle: Text(d.region.name, style: const TextStyle(fontSize: 11, color: Color(0xFF8B99A6))),
+                    onChanged: (v) {
+                      final updated = Set<String>.from(selectedSpots);
+                      v == true ? updated.add(d.name) : updated.remove(d.name);
+                      setDlg(() => selectedSpots = updated);
+                    },
+                  );
+                }).toList(),
+              ),
+            ),
           ]),
           actions: [
             TextButton(
@@ -1443,11 +1487,7 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
                         return;
                       }
                       setDlg(() { saving = true; errorMsg = null; });
-                      final highlightsList = highlightsCtrl.text
-                          .split(',')
-                          .map((s) => s.trim())
-                          .where((s) => s.isNotEmpty)
-                          .toList();
+                      final highlightsList = selectedSpots.toList();
                       final payload = {
                         'name': name,
                         'tagline': taglineCtrl.text.trim(),
@@ -1789,51 +1829,70 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
   void _showEditDialog(Map<String, dynamic> transport) {
     final priceCtrl = TextEditingController(
         text: (transport['price'] as num?)?.toStringAsFixed(0) ?? '0');
+    bool saving = false;
+    String? errorMsg;
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Edit Price — ${transport['title']}'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => _ModernDialog(
+          title: 'Edit Price — ${transport['title']}',
+          body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(transport['description'] as String? ?? '',
                 style: const TextStyle(color: Color(0xFF8B99A6), fontSize: 13)),
             const SizedBox(height: 16),
-            TextField(
-              controller: priceCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Price (₱)',
-                border: OutlineInputBorder(),
-                prefixText: '₱ ',
+            if (errorMsg != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFCA5A5)),
+                ),
+                child: Row(children: [
+                  const Icon(Icons.error_outline, size: 16, color: Color(0xFFEF4444)),
+                  const SizedBox(width: 8),
+                  Flexible(child: Text(errorMsg!, style: const TextStyle(fontSize: 12, color: Color(0xFFB91C1C)))),
+                ]),
               ),
+            ],
+            _DlgField(label: 'PRICE PER TRIP (₱)', controller: priceCtrl, hint: '0', keyboardType: TextInputType.number),
+          ]),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B)),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: saving ? null : () async {
+                final price = double.tryParse(priceCtrl.text);
+                if (price == null) { setDlg(() => errorMsg = 'Enter a valid number.'); return; }
+                setDlg(() { saving = true; errorMsg = null; });
+                try {
+                  await Supabase.instance.client
+                      .from('transport_types')
+                      .update({'price': price})
+                      .eq('id', transport['id'] as String);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  _load();
+                } catch (e) {
+                  setDlg(() { saving = false; errorMsg = e.toString(); });
+                }
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0EA5E9),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              child: saving
+                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Save Price'),
             ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          FilledButton(
-            onPressed: () async {
-              final price = double.tryParse(priceCtrl.text);
-              if (price == null) return;
-              Navigator.pop(context);
-              try {
-                await Supabase.instance.client
-                    .from('transport_types')
-                    .update({'price': price})
-                    .eq('id', transport['id'] as String);
-                _load();
-              } catch (e) {
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-              }
-            },
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFF006994)),
-            child: const Text('Save'),
-          ),
-        ],
       ),
-    );
+    ).then((_) => priceCtrl.dispose());
   }
 
   Future<void> _toggleActive(Map<String, dynamic> transport) async {

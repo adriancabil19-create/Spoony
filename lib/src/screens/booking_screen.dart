@@ -37,14 +37,47 @@ class _BookingScreenState extends State<BookingScreen> {
   bool _isProcessing = false;
   String _bookingRef = '';
 
+  List<AccommodationOption> _accommodations = accommodations;
+  List<TransportOption> _transports = transports;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPrices();
+  }
+
+  Future<void> _loadPrices() async {
+    try {
+      final accData = await Supabase.instance.client.from('accommodation_types').select();
+      final transData = await Supabase.instance.client.from('transport_types').select();
+      final accList = (accData as List).cast<Map<String, dynamic>>();
+      final transList = (transData as List).cast<Map<String, dynamic>>();
+      if (!mounted) return;
+      setState(() {
+        _accommodations = accommodations.map((a) {
+          final db = accList.firstWhere((d) => d['id'] == a.id, orElse: () => {});
+          final rate = (db['nightly_rate'] as num?)?.toDouble() ?? a.nightlyRate;
+          return AccommodationOption(id: a.id, title: a.title, category: a.category, nightlyRate: rate, description: a.description);
+        }).toList();
+        _transports = transports.map((t) {
+          final db = transList.firstWhere((d) => d['id'] == t.id, orElse: () => {});
+          final price = (db['price'] as num?)?.toDouble() ?? t.price;
+          return TransportOption(id: t.id, title: t.title, description: t.description, price: price);
+        }).toList();
+      });
+    } catch (_) {
+      // Keep hardcoded fallback — no-op
+    }
+  }
+
   TourPackage? get _pkg =>
       _packageId == null ? null : tourPackages.firstWhere((p) => p.id == _packageId);
 
   AccommodationOption get _accommodation =>
-      accommodations.firstWhere((a) => a.id == _accommodationId);
+      _accommodations.firstWhere((a) => a.id == _accommodationId);
 
   TransportOption get _transport =>
-      transports.firstWhere((t) => t.id == _transportId);
+      _transports.firstWhere((t) => t.id == _transportId);
 
   int get _nights {
     if (_startDate == null || _endDate == null) return 1;
@@ -521,7 +554,7 @@ class _BookingScreenState extends State<BookingScreen> {
             Wrap(
               spacing: 10,
               runSpacing: 10,
-              children: accommodations.map((a) {
+              children: _accommodations.map((a) {
                 final sel = a.id == _accommodationId;
                 return GestureDetector(
                   onTap: () => setState(() => _accommodationId = a.id),
@@ -571,7 +604,7 @@ class _BookingScreenState extends State<BookingScreen> {
               groupValue: _transportId,
               onChanged: (v) { if (v != null) setState(() => _transportId = v); },
               child: Column(
-                children: transports.map((t) => RadioListTile<String>(
+                children: _transports.map((t) => RadioListTile<String>(
                   value: t.id,
                   title: Text(t.title,
                       style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _kDark)),
