@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../screens/home_screen.dart';
+import '../recovery_flag.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
   static const routeName = '/';
@@ -160,10 +161,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
   // Fallback: supabase_flutter processes the recovery token during initialize()
   // (before AuthScreen builds), so the passwordRecovery event fires into an
-  // empty stream and is lost. On mobile the browser also clears ?code= from
-  // the URL before we can read it. Detect recovery by decoding the JWT amr claim.
+  // empty stream and is lost. kHasRecoveryToken is captured in main() before
+  // Supabase cleans the URL, so it works on both desktop and mobile browsers.
   void _checkInitialState() {
     if (_isPasswordRecovery) return;
+    if (!kHasRecoveryToken) return;
     final session = Supabase.instance.client.auth.currentSession;
     if (session == null) return;
     try {
