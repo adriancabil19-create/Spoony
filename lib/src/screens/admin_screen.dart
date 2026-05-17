@@ -117,7 +117,7 @@ class _AdminScreenState extends State<AdminScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    _buildContent(),
+                    Expanded(child: _buildContent()),
                   ]),
                 );
               }
