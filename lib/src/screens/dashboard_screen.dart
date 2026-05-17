@@ -391,16 +391,6 @@ class _AccountSettingsTab extends StatelessWidget {
             _SettingsField(label: 'Password', value: '••••••••'),
           ]),
         ),
-        const SizedBox(height: 20),
-        _SettingsCard(
-          child: Column(children: [
-            _SettingToggle(label: 'Email notifications', value: true),
-            const Divider(),
-            _SettingToggle(label: 'SMS alerts', value: false),
-            const Divider(),
-            _SettingToggle(label: 'Marketing emails', value: true),
-          ]),
-        ),
       ],
     );
   }
@@ -685,42 +675,6 @@ class _SettingsField extends StatelessWidget {
   }
 }
 
-class _SettingToggle extends StatefulWidget {
-  final String label;
-  final bool value;
-  const _SettingToggle({required this.label, required this.value});
-
-  @override
-  State<_SettingToggle> createState() => _SettingToggleState();
-}
-
-class _SettingToggleState extends State<_SettingToggle> {
-  late bool _value;
-
-  @override
-  void initState() {
-    super.initState();
-    _value = widget.value;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(children: [
-        Expanded(
-          child: Text(widget.label,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF00314F))),
-        ),
-        Switch(
-          value: _value,
-          onChanged: (v) => setState(() => _value = v),
-          activeThumbColor: const Color(0xFF00BCD4),
-        ),
-      ]),
-    );
-  }
-}
 
 class _MenuItem extends StatelessWidget {
   final IconData icon;
