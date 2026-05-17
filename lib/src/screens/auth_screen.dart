@@ -39,7 +39,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkInitialState());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkInitialState();
+      // If already logged in (e.g. browser back button landed here), skip login
+      if (!_isPasswordRecovery) {
+        final session = Supabase.instance.client.auth.currentSession;
+        if (session != null && mounted) {
+          Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+        }
+      }
+    });
 
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
       if (!mounted) return;
