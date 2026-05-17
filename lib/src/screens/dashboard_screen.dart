@@ -387,30 +387,68 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
     final saved = await showDialog<String>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: const Text('Edit Full Name'),
-          content: TextField(
-            controller: ctrl,
-            decoration: InputDecoration(
-              labelText: 'Full Name',
-              errorText: error,
-              border: const OutlineInputBorder(),
-            ),
+        builder: (ctx, setS) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)]),
+                ),
+                child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Edit Full Name', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+                  SizedBox(height: 2),
+                  Text('Update your display name', style: TextStyle(fontSize: 13, color: Colors.white70)),
+                ]),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextField(
+                    controller: ctrl,
+                    decoration: InputDecoration(
+                      hintText: 'Enter your full name',
+                      hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
+                      prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF94A3B8)),
+                      errorText: error,
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B)),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 10),
+                    FilledButton(
+                      onPressed: () {
+                        final v = ctrl.text.trim();
+                        if (v.isEmpty) { setS(() => error = 'Name cannot be empty'); return; }
+                        Navigator.pop(ctx, v);
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF0EA5E9),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text('Save'),
+                    ),
+                  ]),
+                ]),
+              ),
+            ]),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: () {
-                final v = ctrl.text.trim();
-                if (v.isEmpty) {
-                  setS(() => error = 'Name cannot be empty');
-                  return;
-                }
-                Navigator.pop(ctx, v);
-              },
-              child: const Text('Save'),
-            ),
-          ],
         ),
       ),
     );
@@ -435,52 +473,95 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) => AlertDialog(
-          title: const Text('Change Password'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: newCtrl,
-                obscureText: obscureNew,
-                decoration: InputDecoration(
-                  labelText: 'New Password',
-                  errorText: error,
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setS(() => obscureNew = !obscureNew),
-                  ),
+        builder: (ctx, setS) => Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          clipBehavior: Clip.antiAlias,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)]),
                 ),
+                child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Change Password', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+                  SizedBox(height: 2),
+                  Text('Choose a strong password', style: TextStyle(fontSize: 13, color: Colors.white70)),
+                ]),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: confirmCtrl,
-                obscureText: obscureConfirm,
-                decoration: InputDecoration(
-                  labelText: 'Confirm Password',
-                  border: const OutlineInputBorder(),
-                  suffixIcon: IconButton(
-                    icon: Icon(obscureConfirm ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setS(() => obscureConfirm = !obscureConfirm),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  TextField(
+                    controller: newCtrl,
+                    obscureText: obscureNew,
+                    decoration: InputDecoration(
+                      hintText: 'New password',
+                      hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
+                      prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF94A3B8)),
+                      errorText: error,
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      suffixIcon: IconButton(
+                        icon: Icon(obscureNew ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF94A3B8)),
+                        onPressed: () => setS(() => obscureNew = !obscureNew),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 14),
+                  TextField(
+                    controller: confirmCtrl,
+                    obscureText: obscureConfirm,
+                    decoration: InputDecoration(
+                      hintText: 'Confirm new password',
+                      hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
+                      prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF94A3B8)),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      suffixIcon: IconButton(
+                        icon: Icon(obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF94A3B8)),
+                        onPressed: () => setS(() => obscureConfirm = !obscureConfirm),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B)),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 10),
+                    FilledButton(
+                      onPressed: () {
+                        final p = newCtrl.text;
+                        final c = confirmCtrl.text;
+                        if (p.length < 6) { setS(() => error = 'At least 6 characters required'); return; }
+                        if (p != c) { setS(() => error = 'Passwords do not match'); return; }
+                        Navigator.pop(ctx, true);
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF0EA5E9),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: const Text('Save'),
+                    ),
+                  ]),
+                ]),
               ),
-            ],
+            ]),
           ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: () {
-                final p = newCtrl.text;
-                final c = confirmCtrl.text;
-                if (p.length < 6) { setS(() => error = 'At least 6 characters required'); return; }
-                if (p != c) { setS(() => error = 'Passwords do not match'); return; }
-                Navigator.pop(ctx, true);
-              },
-              child: const Text('Save'),
-            ),
-          ],
         ),
       ),
     );
@@ -488,20 +569,14 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
     confirmCtrl.dispose();
     if (confirmed != true || !mounted) return;
     try {
-      await Supabase.instance.client.auth.updateUser(
-        UserAttributes(password: newCtrl.text),
+      await Supabase.instance.client.auth.updateUser(UserAttributes(password: newCtrl.text));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password updated successfully.')),
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password updated successfully.')),
-        );
-      }
     } on AuthException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to update password.')),
-      );
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to update password.')));
     }
   }
 
