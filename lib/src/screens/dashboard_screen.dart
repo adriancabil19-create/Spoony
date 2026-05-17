@@ -362,17 +362,152 @@ class _SavedSpotsTab extends StatelessWidget {
 
 // ── Tab: Account Settings ─────────────────────────────────────────────────────
 
-class _AccountSettingsTab extends StatelessWidget {
+class _AccountSettingsTab extends StatefulWidget {
   final User? user;
   const _AccountSettingsTab({required this.user});
 
   @override
-  Widget build(BuildContext context) {
-    final name = user?.userMetadata?['name'] as String? ??
-        user?.userMetadata?['full_name'] as String? ??
-        'Not set';
-    final email = user?.email ?? 'Not set';
+  State<_AccountSettingsTab> createState() => _AccountSettingsTabState();
+}
 
+class _AccountSettingsTabState extends State<_AccountSettingsTab> {
+  late String _name;
+
+  @override
+  void initState() {
+    super.initState();
+    _name = widget.user?.userMetadata?['name'] as String? ??
+        widget.user?.userMetadata?['full_name'] as String? ??
+        'Not set';
+  }
+
+  Future<void> _editName() async {
+    final ctrl = TextEditingController(text: _name == 'Not set' ? '' : _name);
+    String? error;
+    final saved = await showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Edit Full Name'),
+          content: TextField(
+            controller: ctrl,
+            decoration: InputDecoration(
+              labelText: 'Full Name',
+              errorText: error,
+              border: const OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                final v = ctrl.text.trim();
+                if (v.isEmpty) {
+                  setS(() => error = 'Name cannot be empty');
+                  return;
+                }
+                Navigator.pop(ctx, v);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    ctrl.dispose();
+    if (saved == null || !mounted) return;
+    try {
+      await Supabase.instance.client.auth.updateUser(UserAttributes(data: {'name': saved}));
+      if (mounted) setState(() => _name = saved);
+    } on AuthException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to update name.')));
+    }
+  }
+
+  Future<void> _editPassword() async {
+    final newCtrl = TextEditingController();
+    final confirmCtrl = TextEditingController();
+    bool obscureNew = true;
+    bool obscureConfirm = true;
+    String? error;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          title: const Text('Change Password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: newCtrl,
+                obscureText: obscureNew,
+                decoration: InputDecoration(
+                  labelText: 'New Password',
+                  errorText: error,
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(obscureNew ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setS(() => obscureNew = !obscureNew),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmCtrl,
+                obscureText: obscureConfirm,
+                decoration: InputDecoration(
+                  labelText: 'Confirm Password',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(obscureConfirm ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () => setS(() => obscureConfirm = !obscureConfirm),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: () {
+                final p = newCtrl.text;
+                final c = confirmCtrl.text;
+                if (p.length < 6) { setS(() => error = 'At least 6 characters required'); return; }
+                if (p != c) { setS(() => error = 'Passwords do not match'); return; }
+                Navigator.pop(ctx, true);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ),
+    );
+    newCtrl.dispose();
+    confirmCtrl.dispose();
+    if (confirmed != true || !mounted) return;
+    try {
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: newCtrl.text),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password updated successfully.')),
+        );
+      }
+    } on AuthException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update password.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final email = widget.user?.email ?? 'Not set';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -384,11 +519,11 @@ class _AccountSettingsTab extends StatelessWidget {
         const SizedBox(height: 28),
         _SettingsCard(
           child: Column(children: [
-            _SettingsField(label: 'Full Name', value: name),
+            _SettingsField(label: 'Full Name', value: _name, onEdit: _editName),
             const Divider(),
             _SettingsField(label: 'Email', value: email),
             const Divider(),
-            _SettingsField(label: 'Password', value: '••••••••'),
+            _SettingsField(label: 'Password', value: '••••••••', onEdit: _editPassword),
           ]),
         ),
       ],
@@ -653,7 +788,8 @@ class _SettingsCard extends StatelessWidget {
 class _SettingsField extends StatelessWidget {
   final String label;
   final String value;
-  const _SettingsField({required this.label, required this.value});
+  final VoidCallback? onEdit;
+  const _SettingsField({required this.label, required this.value, this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -669,7 +805,8 @@ class _SettingsField extends StatelessWidget {
           child: Text(value,
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF00314F))),
         ),
-        TextButton(onPressed: () {}, child: const Text('Edit')),
+        if (onEdit != null)
+          TextButton(onPressed: onEdit, child: const Text('Edit')),
       ]),
     );
   }
