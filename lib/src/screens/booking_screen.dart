@@ -41,7 +41,6 @@ class _BookingScreenState extends State<BookingScreen> {
   List<TransportOption> _transports = transports;
   bool _useCustomPlan = false;
   List<_DayPlan> _dayPlans = [];
-  double _depositPerGuest = 0;
 
   @override
   void initState() {
@@ -68,16 +67,6 @@ class _BookingScreenState extends State<BookingScreen> {
           return TransportOption(id: t.id, title: t.title, description: t.description, price: price);
         }).toList();
       });
-    } catch (_) {}
-    try {
-      final dep = await Supabase.instance.client
-          .from('booking_settings')
-          .select('deposit_per_guest')
-          .eq('id', 1)
-          .maybeSingle();
-      if (dep != null && mounted) {
-        setState(() => _depositPerGuest = (dep['deposit_per_guest'] as num?)?.toDouble() ?? 0);
-      }
     } catch (_) {}
   }
 
@@ -125,7 +114,7 @@ class _BookingScreenState extends State<BookingScreen> {
   double get _transTotal => _transport.price;
   double get _grandTotal {
     final base = _useCustomPlan ? _customSpotsTotal : _pkgTotal;
-    return base + _addOnsTotal + _accTotal + _transTotal + _depositPerGuest * _guestCount;
+    return base + _addOnsTotal + _accTotal + _transTotal;
   }
 
   bool _canProceed() {
@@ -405,8 +394,6 @@ class _BookingScreenState extends State<BookingScreen> {
           _SummaryCostRow(label: 'Transport', value: '₱${_transTotal.toStringAsFixed(0)}'),
           if (_addOnsTotal > 0)
             _SummaryCostRow(label: 'Add-ons', value: '₱${_addOnsTotal.toStringAsFixed(0)}'),
-          if (_depositPerGuest > 0)
-            _SummaryCostRow(label: 'Deposit', value: '₱${(_depositPerGuest * _guestCount).toStringAsFixed(0)}'),
           const Divider(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -506,22 +493,6 @@ class _BookingScreenState extends State<BookingScreen> {
                 ),
               ),
             ]),
-            if (_depositPerGuest > 0) ...[
-              const SizedBox(height: 20),
-              const Divider(color: Color(0xFFE2E8F0)),
-              const SizedBox(height: 14),
-              Row(children: [
-                const Icon(Icons.payment_outlined, color: _kOcean, size: 18),
-                const SizedBox(width: 8),
-                const Expanded(child: Text('Booking Deposit',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark))),
-                Text('₱${(_depositPerGuest * _guestCount).toStringAsFixed(0)}',
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _kOcean)),
-              ]),
-              const SizedBox(height: 4),
-              Text('₱${_depositPerGuest.toStringAsFixed(0)} × $_guestCount guest${_guestCount > 1 ? 's' : ''} — collected upfront',
-                  style: const TextStyle(fontSize: 12, color: _kMid)),
-            ],
             if (_startDate != null && _endDate != null) ...[
               const SizedBox(height: 20),
               _buildSummaryBar(),
@@ -929,8 +900,6 @@ class _BookingScreenState extends State<BookingScreen> {
                 label: 'Add-ons',
                 value: tourAddOns.where((a) => _selectedAddOnIds.contains(a.id)).map((a) => a.title).join(', '),
               ),
-            if (_depositPerGuest > 0)
-              _SummaryTile(label: 'Deposit', value: '₱${(_depositPerGuest * _guestCount).toStringAsFixed(0)}'),
             const SizedBox(height: 16),
             const Text('Payment method', style: TextStyle(fontWeight: FontWeight.w700, color: _kDark)),
             const SizedBox(height: 12),
@@ -1012,12 +981,6 @@ class _BookingScreenState extends State<BookingScreen> {
           label: 'Transport (${_transport.title})',
           value: '₱${_transTotal.toStringAsFixed(0)}',
         ),
-        if (_depositPerGuest > 0)
-          _BreakdownLine(
-            label: 'Booking Deposit',
-            value: '₱${(_depositPerGuest * _guestCount).toStringAsFixed(0)}',
-            sub: '₱${_depositPerGuest.toStringAsFixed(0)} × $_guestCount guest${_guestCount > 1 ? 's' : ''}',
-          ),
         const Divider(height: 20, color: Color(0xFFE2E8F0)),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
