@@ -700,72 +700,133 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Reset Password'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("Enter your email and we'll send a reset link."),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _ctrl,
-            enabled: !_sent,
-            keyboardType: TextInputType.emailAddress,
-            decoration: const InputDecoration(
-              hintText: 'Email address',
-              border: OutlineInputBorder(),
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      clipBehavior: Clip.antiAlias,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          // Header
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)]),
             ),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Reset Password',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+              const SizedBox(height: 2),
+              Text(
+                _sent ? 'Check your inbox for the reset link.' : 'Enter your email and we\'ll send a reset link.',
+                style: const TextStyle(fontSize: 13, color: Colors.white70),
+              ),
+            ]),
           ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13)),
-          ],
-          if (_sent) ...[
-            const SizedBox(height: 10),
-            const Text(
-              'Reset link sent! Check your inbox.',
-              style: TextStyle(color: Colors.green, fontSize: 13),
-            ),
-          ],
-        ],
+          // Body
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              if (_sent) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFF86EFAC)),
+                  ),
+                  child: const Row(children: [
+                    Icon(Icons.mark_email_read_outlined, color: Color(0xFF16A34A), size: 22),
+                    SizedBox(width: 12),
+                    Flexible(child: Text('Reset link sent! Check your inbox and spam folder.',
+                        style: TextStyle(fontSize: 13, color: Color(0xFF15803D)))),
+                  ]),
+                ),
+              ] else ...[
+                TextField(
+                  controller: _ctrl,
+                  keyboardType: TextInputType.emailAddress,
+                  decoration: InputDecoration(
+                    hintText: 'your@email.com',
+                    hintStyle: const TextStyle(color: Color(0xFFCBD5E1)),
+                    prefixIcon: const Icon(Icons.email_outlined, color: Color(0xFF94A3B8)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFCA5A5)),
+                    ),
+                    child: Row(children: [
+                      const Icon(Icons.error_outline, size: 16, color: Color(0xFFEF4444)),
+                      const SizedBox(width: 8),
+                      Flexible(child: Text(_error!, style: const TextStyle(fontSize: 12, color: Color(0xFFB91C1C)))),
+                    ]),
+                  ),
+                ],
+              ],
+              const SizedBox(height: 20),
+              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B)),
+                  child: Text(_sent ? 'Close' : 'Cancel'),
+                ),
+                if (!_sent) ...[
+                  const SizedBox(width: 10),
+                  FilledButton(
+                    onPressed: _loading ? null : () async {
+                      setState(() { _loading = true; _error = null; });
+                      try {
+                        await Supabase.instance.client.auth
+                            .resetPasswordForEmail(
+                              _ctrl.text.trim(),
+                              redirectTo: 'https://spoony.vercel.app/',
+                            )
+                            .timeout(const Duration(seconds: 20));
+                        if (mounted) setState(() => _sent = true);
+                      } on AuthException catch (e) {
+                        if (mounted) setState(() => _error = e.message);
+                      } catch (_) {
+                        if (mounted) setState(() => _error = 'Request timed out. Please check your connection and try again.');
+                      } finally {
+                        if (mounted) setState(() => _loading = false);
+                      }
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF0EA5E9),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: _loading
+                        ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('Send Reset Link'),
+                  ),
+                ],
+              ]),
+            ]),
+          ),
+        ]),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text(_sent ? 'Done' : 'Cancel'),
-        ),
-        if (!_sent)
-          FilledButton(
-            onPressed: _loading
-                ? null
-                : () async {
-                    setState(() { _loading = true; _error = null; });
-                    try {
-                      await Supabase.instance.client.auth
-                          .resetPasswordForEmail(
-                            _ctrl.text.trim(),
-                            redirectTo: 'https://spoony.vercel.app/',
-                          )
-                          .timeout(const Duration(seconds: 20));
-                      if (mounted) setState(() => _sent = true);
-                    } on AuthException catch (e) {
-                      if (mounted) setState(() => _error = e.message);
-                    } catch (_) {
-                      if (mounted) setState(() => _error = 'Request timed out. Please check your connection and try again.');
-                    } finally {
-                      if (mounted) setState(() => _loading = false);
-                    }
-                  },
-            child: _loading
-                ? const SizedBox(
-                    height: 16,
-                    width: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Send Reset Link'),
-          ),
-      ],
     );
   }
 }
