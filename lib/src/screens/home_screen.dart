@@ -1221,11 +1221,11 @@ class SpoonyFooter extends StatelessWidget {
       children: [
         Container(
           color: _kDark,
-          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 44),
+          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: mobile ? 24 : 44),
           child: mobile
               ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const _FooterBrand(),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 20),
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Expanded(child: _FooterLinks(title: 'Destinations', links: const ['Cebu City', 'South Cebu', 'North Cebu', 'Bohol'])),
                     Expanded(child: _FooterLinks(title: 'Support', links: const ['Contact Us', 'FAQs', 'Privacy Policy', 'Terms'])),
@@ -1288,12 +1288,13 @@ class _FooterLinks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mobile = _isMobile(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
-      const SizedBox(height: 16),
+      SizedBox(height: mobile ? 10 : 16),
       for (final l in links)
         Padding(
-          padding: const EdgeInsets.only(bottom: 10),
+          padding: EdgeInsets.only(bottom: mobile ? 7 : 10),
           child: Text(l, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
         ),
     ]);
