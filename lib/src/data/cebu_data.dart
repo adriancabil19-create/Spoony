@@ -37,7 +37,7 @@ final List<Destination> cebuDestinations = [
     description: 'A colourful hillside temple with Chinese architecture and panoramic city views.',
     region: DestinationRegion.cebuCity,
     images: [
-      'https://images.unsplash.com/photo-1619446954429-07308ef3d0fd?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=900&q=80',
     ],
     entranceFee: 0,
     rating: 4.6,
@@ -127,7 +127,7 @@ final List<Destination> cebuDestinations = [
     description: 'Visit the world-famous tarsier preserve and learn about Bohol\'s smallest primates.',
     region: DestinationRegion.bohol,
     images: [
-      'https://images.unsplash.com/photo-1553617214-6c6da99b50bb?auto=format&fit=crop&w=900&q=80',
+      'https://images.unsplash.com/photo-1578926288207-a90a5366759d?auto=format&fit=crop&w=900&q=80',
     ],
     entranceFee: 150,
     rating: 4.6,
