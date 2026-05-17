@@ -1209,6 +1209,190 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
 
 // ── Shared footer ─────────────────────────────────────────────────────────────
 
+void _showContactUs(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Contact Us'),
+      content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('We\'d love to hear from you! Reach us through:', style: TextStyle(color: Color(0xFF64748B))),
+        const SizedBox(height: 16),
+        _ContactRow(icon: Icons.email_outlined, text: 'spoonytraveltours@gmail.com'),
+        const SizedBox(height: 10),
+        _ContactRow(icon: Icons.access_time, text: 'Mon–Sat, 8:00 AM – 6:00 PM'),
+        const SizedBox(height: 10),
+        _ContactRow(icon: Icons.location_on_outlined, text: 'Cebu, Philippines'),
+        const SizedBox(height: 16),
+        const Text('We respond within 24 hours.', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+      ]),
+      actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+    ),
+  );
+}
+
+void _showFAQs(BuildContext context) {
+  const faqs = [
+    ('How do I book a tour?', 'Go to the Bookings tab, choose your preferred dates, accommodation type, and transport. Confirm your booking to receive a reference code.'),
+    ('How do I view my bookings?', 'Open the Dashboard tab and go to Upcoming Trips to see all your active bookings.'),
+    ('Can I cancel a booking?', 'Yes. Please contact us at spoonytraveltours@gmail.com at least 48 hours before your trip date for cancellations.'),
+    ('Are entrance fees included?', 'Entrance fees vary per destination. The total shown during booking includes all applicable fees.'),
+    ('How many guests can I bring?', 'You can add up to 20 guests per booking using the guest count selector.'),
+    ('How do I get my reference code?', 'Your reference code appears immediately after confirming a booking and is also saved in your Dashboard under Booking History.'),
+  ];
+
+  showDialog(
+    context: context,
+    builder: (_) => Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 500),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Frequently Asked Questions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _kDark)),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.separated(
+                itemCount: faqs.length,
+                separatorBuilder: (_, __) => const Divider(height: 24),
+                itemBuilder: (_, i) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(faqs[i].$1, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: _kDark)),
+                  const SizedBox(height: 6),
+                  Text(faqs[i].$2, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.5)),
+                ]),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))),
+          ]),
+        ),
+      ),
+    ),
+  );
+}
+
+void _showPrivacyPolicy(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (ctx) => Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 500),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Privacy Policy', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _kDark)),
+            const SizedBox(height: 4),
+            const Text('Last updated: January 2026', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+            const SizedBox(height: 16),
+            const Expanded(child: SingleChildScrollView(child: _PrivacyPolicyContent())),
+            const SizedBox(height: 16),
+            Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))),
+          ]),
+        ),
+      ),
+    ),
+  );
+}
+
+void _showTerms(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (ctx) => Dialog(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 500),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Terms of Service', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _kDark)),
+            const SizedBox(height: 4),
+            const Text('Last updated: January 2026', style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+            const SizedBox(height: 16),
+            const Expanded(child: SingleChildScrollView(child: _TermsContent())),
+            const SizedBox(height: 16),
+            Align(alignment: Alignment.centerRight, child: TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close'))),
+          ]),
+        ),
+      ),
+    ),
+  );
+}
+
+class _ContactRow extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  const _ContactRow({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Icon(icon, size: 18, color: _kOcean),
+      const SizedBox(width: 10),
+      Flexible(child: Text(text, style: const TextStyle(fontSize: 14, color: _kDark))),
+    ]);
+  }
+}
+
+class _PrivacyPolicyContent extends StatelessWidget {
+  const _PrivacyPolicyContent();
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.6);
+    const head = TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Information We Collect', style: head),
+      const SizedBox(height: 6),
+      const Text('We collect your name, email address, and booking details when you create an account or make a reservation through Spoony Travel.', style: style),
+      const SizedBox(height: 14),
+      const Text('How We Use Your Information', style: head),
+      const SizedBox(height: 6),
+      const Text('Your information is used solely to process bookings, send confirmation emails, and improve our services. We do not sell or share your personal data with third parties.', style: style),
+      const SizedBox(height: 14),
+      const Text('Data Storage', style: head),
+      const SizedBox(height: 6),
+      const Text('All data is stored securely using Supabase with industry-standard encryption. We retain your data only as long as your account is active.', style: style),
+      const SizedBox(height: 14),
+      const Text('Your Rights', style: head),
+      const SizedBox(height: 6),
+      const Text('You may request access to, correction of, or deletion of your personal data at any time by contacting us at spoonytraveltours@gmail.com.', style: style),
+      const SizedBox(height: 14),
+      const Text('Cookies', style: head),
+      const SizedBox(height: 6),
+      const Text('We use session cookies only to keep you logged in. No tracking or advertising cookies are used.', style: style),
+    ]);
+  }
+}
+
+class _TermsContent extends StatelessWidget {
+  const _TermsContent();
+
+  @override
+  Widget build(BuildContext context) {
+    const style = TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.6);
+    const head = TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Bookings', style: head),
+      const SizedBox(height: 6),
+      const Text('All bookings are subject to availability and require admin approval. A booking is only confirmed once the status changes to "Confirmed" in your Dashboard.', style: style),
+      const SizedBox(height: 14),
+      const Text('Cancellations', style: head),
+      const SizedBox(height: 6),
+      const Text('Cancellation requests must be submitted at least 48 hours before the trip start date by emailing spoonytraveltours@gmail.com. Late cancellations may not be eligible for a refund.', style: style),
+      const SizedBox(height: 14),
+      const Text('Changes to Tours', style: head),
+      const SizedBox(height: 6),
+      const Text('Spoony Travel reserves the right to modify or cancel tours due to weather conditions, force majeure, or other unforeseen circumstances. Affected guests will be notified and offered a reschedule or refund.', style: style),
+      const SizedBox(height: 14),
+      const Text('Guest Responsibility', style: head),
+      const SizedBox(height: 6),
+      const Text('Guests are responsible for their own conduct during tours. Spoony Travel is not liable for personal injury, loss of property, or damages resulting from a guest\'s own actions.', style: style),
+      const SizedBox(height: 14),
+      const Text('Contact', style: head),
+      const SizedBox(height: 6),
+      const Text('For any concerns regarding these terms, contact us at spoonytraveltours@gmail.com.', style: style),
+    ]);
+  }
+}
+
 class SpoonyFooter extends StatelessWidget {
   const SpoonyFooter({super.key});
 
@@ -1227,14 +1411,28 @@ class SpoonyFooter extends StatelessWidget {
                   const _FooterBrand(),
                   const SizedBox(height: 20),
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Expanded(child: _FooterLinks(title: 'Destinations', links: const ['Cebu City', 'South Cebu', 'North Cebu', 'Bohol'])),
-                    Expanded(child: _FooterLinks(title: 'Support', links: const ['Contact Us', 'FAQs', 'Privacy Policy', 'Terms'])),
+                    const Expanded(child: _FooterLinks(title: 'Destinations', links: [
+                      ('Cebu City', null), ('South Cebu', null), ('North Cebu', null), ('Bohol', null),
+                    ])),
+                    Expanded(child: _FooterLinks(title: 'Support', links: [
+                      ('Contact Us', _showContactUs),
+                      ('FAQs', _showFAQs),
+                      ('Privacy Policy', _showPrivacyPolicy),
+                      ('Terms', _showTerms),
+                    ])),
                   ]),
                 ])
               : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   const Expanded(flex: 2, child: _FooterBrand()),
-                  Expanded(child: _FooterLinks(title: 'Destinations', links: const ['Cebu City', 'South Cebu', 'North Cebu', 'Bohol'])),
-                  Expanded(child: _FooterLinks(title: 'Support', links: const ['Contact Us', 'FAQs', 'Privacy Policy', 'Terms of Service'])),
+                  const Expanded(child: _FooterLinks(title: 'Destinations', links: [
+                    ('Cebu City', null), ('South Cebu', null), ('North Cebu', null), ('Bohol', null),
+                  ])),
+                  Expanded(child: _FooterLinks(title: 'Support', links: [
+                    ('Contact Us', _showContactUs),
+                    ('FAQs', _showFAQs),
+                    ('Privacy Policy', _showPrivacyPolicy),
+                    ('Terms of Service', _showTerms),
+                  ])),
                 ]),
         ),
         Container(
@@ -1283,7 +1481,7 @@ class _FooterBrand extends StatelessWidget {
 
 class _FooterLinks extends StatelessWidget {
   final String title;
-  final List<String> links;
+  final List<(String, void Function(BuildContext)?)> links;
   const _FooterLinks({required this.title, required this.links});
 
   @override
@@ -1292,10 +1490,22 @@ class _FooterLinks extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
       SizedBox(height: mobile ? 10 : 16),
-      for (final l in links)
+      for (final (label, onTap) in links)
         Padding(
           padding: EdgeInsets.only(bottom: mobile ? 7 : 10),
-          child: Text(l, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+          child: onTap != null
+              ? GestureDetector(
+                  onTap: () => onTap(context),
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: Text(label, style: const TextStyle(
+                      color: Color(0xFF94A3B8), fontSize: 13,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Color(0xFF94A3B8),
+                    )),
+                  ),
+                )
+              : Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
         ),
     ]);
   }
