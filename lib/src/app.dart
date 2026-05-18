@@ -7,6 +7,24 @@ import 'screens/booking_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/admin_screen.dart';
 
+class _FadePageTransition extends PageTransitionsBuilder {
+  const _FadePageTransition();
+
+  @override
+  Widget buildTransitions<T>(
+    PageRoute<T> route,
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    return FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+      child: child,
+    );
+  }
+}
+
 class SpoonyApp extends StatelessWidget {
   const SpoonyApp({super.key});
 
@@ -25,6 +43,15 @@ class SpoonyApp extends StatelessWidget {
             ),
             scaffoldBackgroundColor: const Color(0xFFF8FAFC),
             fontFamily: 'Inter',
+            pageTransitionsTheme: const PageTransitionsTheme(
+              builders: {
+                TargetPlatform.android: _FadePageTransition(),
+                TargetPlatform.iOS: _FadePageTransition(),
+                TargetPlatform.linux: _FadePageTransition(),
+                TargetPlatform.macOS: _FadePageTransition(),
+                TargetPlatform.windows: _FadePageTransition(),
+              },
+            ),
             textTheme: ThemeData.light().textTheme.copyWith(
                   headlineLarge: const TextStyle(
                     fontSize: 34,
@@ -43,31 +70,13 @@ class SpoonyApp extends StatelessWidget {
                 ),
           ),
           initialRoute: AuthScreen.routeName,
-          onGenerateRoute: (settings) {
-            final Widget page;
-            switch (settings.name) {
-              case AuthScreen.routeName:
-                page = const AuthScreen();
-              case ExploreScreen.routeName:
-                page = const ExploreScreen();
-              case BookingScreen.routeName:
-                page = const BookingScreen();
-              case DashboardScreen.routeName:
-                page = const DashboardScreen();
-              case AdminScreen.routeName:
-                page = const AdminScreen();
-              default:
-                page = const HomeScreen();
-            }
-            return PageRouteBuilder(
-              settings: settings,
-              pageBuilder: (_, _, _) => page,
-              transitionsBuilder: (_, animation, _, child) => FadeTransition(
-                opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
-                child: child,
-              ),
-              transitionDuration: const Duration(milliseconds: 220),
-            );
+          routes: {
+            AuthScreen.routeName: (context) => const AuthScreen(),
+            HomeScreen.routeName: (context) => const HomeScreen(),
+            ExploreScreen.routeName: (context) => const ExploreScreen(),
+            BookingScreen.routeName: (context) => const BookingScreen(),
+            DashboardScreen.routeName: (context) => const DashboardScreen(),
+            AdminScreen.routeName: (context) => const AdminScreen(),
           },
         );
   }
