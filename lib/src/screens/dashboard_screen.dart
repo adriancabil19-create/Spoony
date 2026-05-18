@@ -799,9 +799,18 @@ class _TripCardState extends State<_TripCard> {
       final itineraryLines = widget.itinerary.isNotEmpty
           ? widget.itinerary.split('\n').where((l) => l.trim().isNotEmpty).toList()
           : <String>[];
-      // Fallback: package highlights for old bookings without itinerary data
-      final pkg = tourPackages.where((p) => p.name == widget.tourType).firstOrNull;
-      final highlights = pkg?.highlights ?? <String>[];
+
+      // Fallback highlights for old bookings without itinerary field:
+      // tour_type may be "Pkg A" (single) or "Pkg A, Pkg B" (multi-day)
+      final fallbackPkgNames = widget.tourType.split(', ').map((s) => s.trim()).toList();
+      final fallbackHighlights = <String>[];
+      for (final pName in fallbackPkgNames) {
+        final p = tourPackages.where((p) => p.name == pName).firstOrNull;
+        if (p != null) {
+          if (fallbackPkgNames.length > 1) fallbackHighlights.add('${p.name}:');
+          fallbackHighlights.addAll(p.highlights);
+        }
+      }
 
       pw.Widget sectionLabel(String text) => pw.Padding(
         padding: const pw.EdgeInsets.only(bottom: 10),
@@ -1009,7 +1018,7 @@ class _TripCardState extends State<_TripCard> {
                       style: pw.TextStyle(fontSize: 10, color: mid, lineSpacing: 4),
                     ),
                   ),
-                ] else if (highlights.isNotEmpty) ...[
+                ] else if (fallbackHighlights.isNotEmpty) ...[
                   sectionLabel('TOUR HIGHLIGHTS'),
                   pw.Container(
                     decoration: pw.BoxDecoration(
@@ -1017,7 +1026,7 @@ class _TripCardState extends State<_TripCard> {
                       borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
                     ),
                     child: pw.Column(
-                      children: highlights.asMap().entries.map((e) =>
+                      children: fallbackHighlights.asMap().entries.map((e) =>
                         pw.Container(
                           color: e.key.isOdd ? rowAlt : white,
                           padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 10),

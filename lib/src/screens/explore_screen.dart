@@ -34,36 +34,81 @@ class _ExploreScreenState extends State<ExploreScreen> {
     _loadDestinations();
   }
 
+  static DestinationRegion _parseRegion(String? r) {
+    switch (r) {
+      case 'cebu_city':   case 'cebuCity':   return DestinationRegion.cebuCity;
+      case 'south_cebu':  case 'southCebu':  return DestinationRegion.southCebu;
+      case 'north_cebu':  case 'northCebu':  return DestinationRegion.northCebu;
+      case 'islands':     case 'bohol':      return DestinationRegion.bohol;
+      default:                               return DestinationRegion.cebuCity;
+    }
+  }
+
   Future<void> _loadDestinations() async {
     try {
       final data = await Supabase.instance.client.from('destinations').select();
       final dbList = (data as List).cast<Map<String, dynamic>>();
-      if (!mounted || dbList.isEmpty) return;
-      final merged = cebuDestinations.map((d) {
-        final db = dbList.firstWhere(
-          (row) => (row['name'] as String).toLowerCase() == d.name.toLowerCase(),
-          orElse: () => {},
-        );
-        if (db.isEmpty) return d;
-        final fee = (db['entrance_fee'] as num?)?.toDouble() ?? d.entranceFee;
-        final imgs = (db['image_urls'] as List?)?.isNotEmpty == true
-            ? (db['image_urls'] as List).cast<String>()
-            : d.images;
-        return Destination(
-          id: db['id'] as String? ?? d.id,
-          name: db['name'] as String? ?? d.name,
-          description: db['description'] as String? ?? d.description,
-          region: d.region,
-          images: imgs,
-          entranceFee: fee,
-          rating: (db['rating'] as num?)?.toDouble() ?? d.rating,
-          reviews: d.reviews,
-          coordinates: d.coordinates,
-          travelTime: d.travelTime,
-          averageDistanceKm: d.averageDistanceKm,
-        );
-      }).toList();
-      setState(() => _destinations = merged);
+      if (!mounted) return;
+
+      // Names set to unavailable in DB — hide from explore
+      final unavailable = dbList
+          .where((r) => r['is_available'] == false)
+          .map((r) => (r['name'] as String).toLowerCase())
+          .toSet();
+
+      // Hardcoded names (for detecting DB-only new spots)
+      final hardcoded = cebuDestinations.map((d) => d.name.toLowerCase()).toSet();
+
+      // Merge hardcoded with DB overrides, skip unavailable
+      final merged = cebuDestinations
+          .where((d) => !unavailable.contains(d.name.toLowerCase()))
+          .map((d) {
+            final db = dbList.firstWhere(
+              (row) => (row['name'] as String).toLowerCase() == d.name.toLowerCase(),
+              orElse: () => {},
+            );
+            if (db.isEmpty) return d;
+            return Destination(
+              id: db['id'] as String? ?? d.id,
+              name: db['name'] as String? ?? d.name,
+              description: db['description'] as String? ?? d.description,
+              region: d.region,
+              images: (db['image_urls'] as List?)?.isNotEmpty == true
+                  ? (db['image_urls'] as List).cast<String>()
+                  : d.images,
+              entranceFee: (db['entrance_fee'] as num?)?.toDouble() ?? d.entranceFee,
+              rating: (db['rating'] as num?)?.toDouble() ?? d.rating,
+              reviews: d.reviews,
+              coordinates: d.coordinates,
+              travelTime: d.travelTime,
+              averageDistanceKm: d.averageDistanceKm,
+            );
+          }).toList();
+
+      // Append DB-only spots (added from admin, not in cebuDestinations)
+      final newSpots = dbList
+          .where((r) {
+            final name = (r['name'] as String).toLowerCase();
+            return !hardcoded.contains(name) && (r['is_available'] as bool? ?? true);
+          })
+          .map((r) => Destination(
+            id: r['id'] as String? ?? '',
+            name: r['name'] as String? ?? '',
+            description: r['description'] as String? ?? '',
+            region: _parseRegion(r['region'] as String?),
+            images: (r['image_urls'] as List?)?.cast<String>() ?? [],
+            entranceFee: (r['entrance_fee'] as num?)?.toDouble() ?? 0,
+            rating: (r['rating'] as num?)?.toDouble() ?? 0,
+            reviews: 0,
+            coordinates: {
+              'lat': (r['latitude'] as num?)?.toDouble() ?? 10.3157,
+              'lng': (r['longitude'] as num?)?.toDouble() ?? 123.8854,
+            },
+            travelTime: '',
+            averageDistanceKm: 0,
+          )).toList();
+
+      setState(() => _destinations = [...merged, ...newSpots]);
     } catch (_) {}
   }
 
