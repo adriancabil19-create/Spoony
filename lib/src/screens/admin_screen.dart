@@ -45,6 +45,7 @@ class _AdminScreenState extends State<AdminScreen> {
     (Icons.hotel, 'Manage Hotels'),
     (Icons.tour, 'Manage Packages'),
     (Icons.directions_car, 'Manage Transport'),
+    (Icons.drive_eta, 'Manage Drivers'),
   ];
 
   @override
@@ -216,6 +217,7 @@ class _AdminScreenState extends State<AdminScreen> {
       case 2: return const _ManageHotelsTab();
       case 3: return const _ManagePackagesTab();
       case 4: return const _ManageTransportTab();
+      case 5: return const _ManageDriversTab();
       default: return const _BookingsTab();
     }
   }
@@ -232,6 +234,7 @@ class _BookingsTab extends StatefulWidget {
 class _BookingsTabState extends State<_BookingsTab> {
   bool _loading = true;
   List<Map<String, dynamic>> _bookings = [];
+  List<Map<String, dynamic>> _drivers = [];
   String? _error;
   String _filter = 'all';
   String _searchQuery = '';
@@ -253,12 +256,13 @@ class _BookingsTabState extends State<_BookingsTab> {
   Future<void> _load() async {
     setState(() { _loading = true; _error = null; });
     try {
-      final data = await Supabase.instance.client
-          .from('bookings')
-          .select()
-          .order('created_at', ascending: false);
+      final results = await Future.wait([
+        Supabase.instance.client.from('bookings').select().order('created_at', ascending: false),
+        Supabase.instance.client.from('drivers').select().order('full_name'),
+      ]);
       setState(() {
-        _bookings = (data as List).cast<Map<String, dynamic>>();
+        _bookings = (results[0] as List).cast<Map<String, dynamic>>();
+        _drivers  = (results[1] as List).cast<Map<String, dynamic>>();
         _loading = false;
       });
     } catch (e) {
@@ -444,8 +448,10 @@ class _BookingsTabState extends State<_BookingsTab> {
             itemCount: _filtered.length,
             itemBuilder: (_, i) => _BookingRow(
               booking: _filtered[i],
+              drivers: _drivers,
               onApprove: _approve,
               onReject: _reject,
+              onRefresh: _load,
             ),
           ),
       ],
@@ -499,15 +505,51 @@ class _FilterChip extends StatelessWidget {
   }
 }
 
-class _BookingRow extends StatelessWidget {
+class _BookingRow extends StatefulWidget {
   final Map<String, dynamic> booking;
+  final List<Map<String, dynamic>> drivers;
   final Future<void> Function(String) onApprove;
   final Future<void> Function(String) onReject;
+  final Future<void> Function() onRefresh;
 
-  const _BookingRow({required this.booking, required this.onApprove, required this.onReject});
+  const _BookingRow({
+    required this.booking,
+    required this.drivers,
+    required this.onApprove,
+    required this.onReject,
+    required this.onRefresh,
+  });
+
+  @override
+  State<_BookingRow> createState() => _BookingRowState();
+}
+
+class _BookingRowState extends State<_BookingRow> {
+  bool _assigningDriver = false;
+
+  Future<void> _assignDriver(String bookingId, String? driverId) async {
+    setState(() => _assigningDriver = true);
+    try {
+      await Supabase.instance.client
+          .from('bookings')
+          .update({'driver_id': driverId})
+          .eq('id', bookingId);
+      await widget.onRefresh();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(driverId == null ? 'Driver unassigned.' : 'Driver assigned.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _assigningDriver = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final booking = widget.booking;
     final status = (booking['status'] as String? ?? 'pending').toLowerCase();
     final Color statusColor;
     switch (status) {
@@ -516,21 +558,22 @@ class _BookingRow extends StatelessWidget {
       default: statusColor = const Color(0xFFFFC107);
     }
 
-    final ref = booking['reference_code'] as String? ?? '—';
-    final email = booking['user_email'] as String? ?? '—';
-    final startDate = (booking['start_date'] as String? ?? '').replaceAll('T00:00:00.000Z', '');
-    final endDate = (booking['end_date'] as String? ?? '').replaceAll('T00:00:00.000Z', '');
-    final guests = booking['guest_count'] as int? ?? 0;
-    final amount = booking['total_amount'] != null
-        ? '₱${(booking['total_amount'] as num).toStringAsFixed(0)}'
-        : '—';
-    final id = booking['id'] as String;
-    final accType = booking['accommodation_type'] as String? ?? '';
-    final transType = booking['transport_type'] as String? ?? '';
-    final tourType = booking['tour_type'] as String? ?? '';
-    final accLabel = _accLabels[accType] ?? (accType.isNotEmpty ? accType : '—');
+    final ref        = booking['reference_code'] as String? ?? '—';
+    final email      = booking['user_email']     as String? ?? '—';
+    final startDate  = (booking['start_date']    as String? ?? '').replaceAll('T00:00:00.000Z', '');
+    final endDate    = (booking['end_date']       as String? ?? '').replaceAll('T00:00:00.000Z', '');
+    final guests     = booking['guest_count']    as int?    ?? 0;
+    final amount     = booking['total_amount'] != null
+        ? '₱${(booking['total_amount'] as num).toStringAsFixed(0)}' : '—';
+    final id         = booking['id']             as String;
+    final accType    = booking['accommodation_type'] as String? ?? '';
+    final transType  = booking['transport_type']     as String? ?? '';
+    final tourType   = booking['tour_type']           as String? ?? '';
+    final accLabel   = _accLabels[accType]   ?? (accType.isNotEmpty   ? accType   : '—');
     final transLabel = _transLabels[transType] ?? (transType.isNotEmpty ? transType : '—');
-    final createdAt = (booking['created_at'] as String? ?? '').split('T').first;
+    final createdAt  = (booking['created_at'] as String? ?? '').split('T').first;
+    final currentDriverId = booking['driver_id'] as String?;
+    final currentDriver   = widget.drivers.where((d) => d['id'] == currentDriverId).firstOrNull;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -555,13 +598,11 @@ class _BookingRow extends StatelessWidget {
             ),
             const SizedBox(width: 10),
             Text(ref,
-                style: const TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF006994))),
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF006994))),
             const Spacer(),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Text(amount,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF50C878))),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Color(0xFF50C878))),
               if (createdAt.isNotEmpty)
                 Text('Booked $createdAt',
                     style: const TextStyle(fontSize: 11, color: Color(0xFF8B99A6))),
@@ -576,31 +617,76 @@ class _BookingRow extends StatelessWidget {
           ]),
           const SizedBox(height: 8),
           Row(children: [
-            Expanded(
-                child: _InfoRow(
-                    icon: Icons.calendar_today,
-                    label: 'Dates',
-                    value: '$startDate → $endDate')),
-            Expanded(
-                child: _InfoRow(
-                    icon: Icons.hotel, label: 'Accommodation', value: accLabel)),
+            Expanded(child: _InfoRow(icon: Icons.calendar_today, label: 'Dates', value: '$startDate → $endDate')),
+            Expanded(child: _InfoRow(icon: Icons.hotel, label: 'Accommodation', value: accLabel)),
           ]),
           const SizedBox(height: 8),
           Row(children: [
-            Expanded(
-                child: _InfoRow(
-                    icon: Icons.directions_car, label: 'Transport', value: transLabel)),
+            Expanded(child: _InfoRow(icon: Icons.directions_car, label: 'Transport', value: transLabel)),
             if (tourType.isNotEmpty)
-              Expanded(
-                  child: _InfoRow(
-                      icon: Icons.tour, label: 'Tour Package', value: tourType)),
+              Expanded(child: _InfoRow(icon: Icons.tour, label: 'Tour Package', value: tourType)),
           ]),
+
+          // ── Assign driver ──────────────────────────────────────────────────
+          const SizedBox(height: 12),
+          const Divider(height: 1, color: Color(0xFFF0F4F5)),
+          const SizedBox(height: 12),
+          Row(children: [
+            const Icon(Icons.drive_eta, size: 14, color: Color(0xFF8B99A6)),
+            const SizedBox(width: 6),
+            const Text('Assigned Driver',
+                style: TextStyle(fontSize: 11, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
+          ]),
+          const SizedBox(height: 6),
+          if (widget.drivers.isEmpty)
+            const Text('No drivers yet — add one in Manage Drivers.',
+                style: TextStyle(fontSize: 12, color: Color(0xFF8B99A6)))
+          else
+            Row(children: [
+              Expanded(
+                child: DropdownButtonFormField<String?>(
+                  initialValue: currentDriverId,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF0EA5E9))),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                  hint: const Text('Unassigned', style: TextStyle(fontSize: 13, color: Color(0xFF8B99A6))),
+                  items: [
+                    const DropdownMenuItem<String?>(value: null, child: Text('Unassigned', style: TextStyle(fontSize: 13))),
+                    ...widget.drivers.map((d) => DropdownMenuItem<String?>(
+                      value: d['id'] as String,
+                      child: Text(
+                        '${d['full_name']} · ${d['vehicle_type']}',
+                        style: const TextStyle(fontSize: 13),
+                      ),
+                    )),
+                  ],
+                  onChanged: _assigningDriver ? null : (v) => _assignDriver(id, v),
+                ),
+              ),
+              if (_assigningDriver) ...[
+                const SizedBox(width: 10),
+                const SizedBox(width: 18, height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0EA5E9))),
+              ],
+            ]),
+          if (currentDriver != null) ...[
+            const SizedBox(height: 4),
+            Text('${currentDriver['full_name']} · ${currentDriver['phone'] ?? ''}',
+                style: const TextStyle(fontSize: 11, color: Color(0xFF50C878), fontWeight: FontWeight.w600)),
+          ],
+
           if (status == 'pending') ...[
             const SizedBox(height: 14),
             Row(children: [
               Expanded(
                 child: FilledButton.icon(
-                  onPressed: () => onApprove(id),
+                  onPressed: () => widget.onApprove(id),
                   icon: const Icon(Icons.check, size: 16),
                   label: const Text('Approve', style: TextStyle(fontWeight: FontWeight.w700)),
                   style: FilledButton.styleFrom(
@@ -613,7 +699,7 @@ class _BookingRow extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () => onReject(id),
+                  onPressed: () => widget.onReject(id),
                   icon: const Icon(Icons.close, size: 16),
                   label: const Text('Reject', style: TextStyle(fontWeight: FontWeight.w700)),
                   style: OutlinedButton.styleFrom(
@@ -630,7 +716,7 @@ class _BookingRow extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () => onReject(id),
+                onPressed: () => widget.onReject(id),
                 icon: const Icon(Icons.cancel_outlined, size: 16),
                 label: const Text('Cancel Booking'),
                 style: OutlinedButton.styleFrom(
@@ -2212,6 +2298,275 @@ class _DlgField extends StatelessWidget {
           contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         ),
       ),
+    ]);
+  }
+}
+
+// ── Tab: Manage Drivers ───────────────────────────────────────────────────────
+
+class _ManageDriversTab extends StatefulWidget {
+  const _ManageDriversTab();
+  @override
+  State<_ManageDriversTab> createState() => _ManageDriversTabState();
+}
+
+class _ManageDriversTabState extends State<_ManageDriversTab> {
+  bool _loading = true;
+  List<Map<String, dynamic>> _drivers = [];
+  String? _error;
+
+  final _nameCtrl    = TextEditingController();
+  final _emailCtrl   = TextEditingController();
+  final _phoneCtrl   = TextEditingController();
+  final _plateCtrl   = TextEditingController();
+  String _vehicleType = 'Van';
+  bool _saving = false;
+
+  static const _vehicleTypes = ['Van', 'SUV', 'Sedan', 'Bus', 'Motorcycle'];
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _emailCtrl.dispose();
+    _phoneCtrl.dispose();
+    _plateCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _load() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final data = await Supabase.instance.client
+          .from('drivers')
+          .select()
+          .order('created_at', ascending: false);
+      setState(() {
+        _drivers = (data as List).cast<Map<String, dynamic>>();
+        _loading = false;
+      });
+    } catch (e) {
+      setState(() { _error = e.toString(); _loading = false; });
+    }
+  }
+
+  Future<void> _addDriver() async {
+    final name  = _nameCtrl.text.trim();
+    final email = _emailCtrl.text.trim();
+    if (name.isEmpty || email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Name and email are required.')),
+      );
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      await Supabase.instance.client.from('drivers').insert({
+        'full_name': name,
+        'email': email,
+        'phone': _phoneCtrl.text.trim(),
+        'vehicle_type': _vehicleType,
+        'license_plate': _plateCtrl.text.trim(),
+        'is_available': true,
+      });
+      _nameCtrl.clear();
+      _emailCtrl.clear();
+      _phoneCtrl.clear();
+      _plateCtrl.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Driver added successfully.')),
+        );
+      }
+      await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _deleteDriver(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Remove Driver'),
+        content: const Text('Remove this driver? Their assigned bookings will be unassigned.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFFF6B4A)),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await Supabase.instance.client.from('drivers').delete().eq('id', id);
+      await _load();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Manage Drivers',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
+      const SizedBox(height: 4),
+      const Text('Add drivers and assign them to bookings.',
+          style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
+      const SizedBox(height: 24),
+
+      // ── Add driver form ─────────────────────────────────────────────────────
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE8EDEF)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Add New Driver',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
+          const SizedBox(height: 16),
+          Row(children: [
+            Expanded(child: _DlgField(label: 'Full Name *', hint: 'Juan dela Cruz', controller: _nameCtrl)),
+            const SizedBox(width: 12),
+            Expanded(child: _DlgField(label: 'Email *', hint: 'driver@email.com', controller: _emailCtrl)),
+          ]),
+          const SizedBox(height: 12),
+          Row(children: [
+            Expanded(child: _DlgField(label: 'Phone', hint: '+63 912 345 6789', controller: _phoneCtrl)),
+            const SizedBox(width: 12),
+            Expanded(child: _DlgField(label: 'License Plate', hint: 'ABC 1234', controller: _plateCtrl)),
+          ]),
+          const SizedBox(height: 12),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Vehicle Type',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF374151))),
+            const SizedBox(height: 6),
+            DropdownButtonFormField<String>(
+              initialValue: _vehicleType,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              ),
+              items: _vehicleTypes.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+              onChanged: (v) => setState(() => _vehicleType = v ?? 'Van'),
+            ),
+          ]),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: _saving ? null : _addDriver,
+              icon: _saving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Icon(Icons.person_add, size: 18),
+              label: const Text('Add Driver', style: TextStyle(fontWeight: FontWeight.w700)),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0EA5E9),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ]),
+      ),
+      const SizedBox(height: 28),
+
+      // ── Driver list ─────────────────────────────────────────────────────────
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text('Drivers (${_drivers.length})',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
+        IconButton(onPressed: _load, icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4))),
+      ]),
+      const SizedBox(height: 12),
+      if (_loading)
+        const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
+      else if (_error != null)
+        _AdminEmpty(message: _error!)
+      else if (_drivers.isEmpty)
+        const _AdminEmpty(message: 'No drivers yet. Add one above.')
+      else
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: _drivers.length,
+          itemBuilder: (_, i) {
+            final d = _drivers[i];
+            final name     = d['full_name']     as String? ?? '—';
+            final email    = d['email']         as String? ?? '—';
+            final phone    = d['phone']         as String? ?? '—';
+            final vehicle  = d['vehicle_type']  as String? ?? 'Van';
+            final plate    = d['license_plate'] as String? ?? '—';
+            final avail    = d['is_available']  as bool?   ?? true;
+            final id       = d['id']            as String;
+            return Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE8EDEF)),
+              ),
+              child: Row(children: [
+                Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0F7FA),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: const Icon(Icons.drive_eta, color: Color(0xFF006994), size: 22),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(name,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
+                    Text(email,
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6))),
+                    Text('$vehicle · $plate · $phone',
+                        style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6))),
+                  ]),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: (avail ? const Color(0xFF50C878) : const Color(0xFFFF6B4A)).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    avail ? 'Available' : 'Busy',
+                    style: TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w700,
+                      color: avail ? const Color(0xFF50C878) : const Color(0xFFFF6B4A),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                IconButton(
+                  onPressed: () => _deleteDriver(id),
+                  icon: const Icon(Icons.delete_outline, color: Color(0xFFFF6B4A), size: 20),
+                  tooltip: 'Remove driver',
+                ),
+              ]),
+            );
+          },
+        ),
     ]);
   }
 }
