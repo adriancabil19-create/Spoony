@@ -1067,17 +1067,17 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
                   onTap: () { Navigator.pop(context); Navigator.pushReplacementNamed(context, HomeScreen.routeName); }),
               _MobileNavItem(label: 'Explore', icon: Icons.explore_outlined,
                   active: widget.current == 'explore',
-                  onTap: () { Navigator.pop(context); Navigator.pushNamed(context, ExploreScreen.routeName); }),
+                  onTap: () { Navigator.pop(context); Navigator.pushReplacementNamed(context, ExploreScreen.routeName); }),
               _MobileNavItem(label: 'Bookings', icon: Icons.book_outlined,
                   active: widget.current == 'booking',
-                  onTap: () { Navigator.pop(context); Navigator.pushNamed(context, BookingScreen.routeName); }),
+                  onTap: () { Navigator.pop(context); Navigator.pushReplacementNamed(context, BookingScreen.routeName); }),
               _MobileNavItem(label: 'Dashboard', icon: Icons.dashboard_outlined,
                   active: widget.current == 'dashboard',
-                  onTap: () { Navigator.pop(context); Navigator.pushNamed(context, DashboardScreen.routeName); }),
+                  onTap: () { Navigator.pop(context); Navigator.pushReplacementNamed(context, DashboardScreen.routeName); }),
               if (_isAdmin)
                 _MobileNavItem(label: 'Admin Panel', icon: Icons.admin_panel_settings_outlined,
                     active: widget.current == 'admin',
-                    onTap: () { Navigator.pop(context); Navigator.pushNamed(context, AdminScreen.routeName); }),
+                    onTap: () { Navigator.pop(context); Navigator.pushReplacementNamed(context, AdminScreen.routeName); }),
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1161,14 +1161,14 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
               _NavBtn(label: 'Home', active: widget.current == 'home',
                   onTap: () => Navigator.pushReplacementNamed(context, HomeScreen.routeName)),
               _NavBtn(label: 'Explore', active: widget.current == 'explore',
-                  onTap: () => Navigator.pushNamed(context, ExploreScreen.routeName)),
+                  onTap: () => Navigator.pushReplacementNamed(context, ExploreScreen.routeName)),
               _NavBtn(label: 'Bookings', active: widget.current == 'booking',
-                  onTap: () => Navigator.pushNamed(context, BookingScreen.routeName)),
+                  onTap: () => Navigator.pushReplacementNamed(context, BookingScreen.routeName)),
               _NavBtn(label: 'Dashboard', active: widget.current == 'dashboard',
-                  onTap: () => Navigator.pushNamed(context, DashboardScreen.routeName)),
+                  onTap: () => Navigator.pushReplacementNamed(context, DashboardScreen.routeName)),
               if (_isAdmin)
                 _NavBtn(label: 'Admin', active: widget.current == 'admin',
-                    onTap: () => Navigator.pushNamed(context, AdminScreen.routeName)),
+                    onTap: () => Navigator.pushReplacementNamed(context, AdminScreen.routeName)),
               const SizedBox(width: 20),
               if (_user != null) ...[
                 CircleAvatar(
@@ -1253,7 +1253,7 @@ void _showFAQs(BuildContext context) {
             Expanded(
               child: ListView.separated(
                 itemCount: faqs.length,
-                separatorBuilder: (_, __) => const Divider(height: 24),
+                separatorBuilder: (_, _) => const Divider(height: 24),
                 itemBuilder: (_, i) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(faqs[i].$1, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, color: _kDark)),
                   const SizedBox(height: 6),
