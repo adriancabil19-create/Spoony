@@ -191,20 +191,24 @@ class _BookingScreenState extends State<BookingScreen> {
           (t) => t.id == _transportId,
           orElse: () => _transports.first,
         );
-        Supabase.instance.client.functions.invoke(
-          'send-booking-receipt',
-          body: {
-            'email': email,
-            'reference': ref,
-            'guestCount': _guestCount,
-            'startDate': _startDate!.toIso8601String().substring(0, 10),
-            'endDate': _endDate!.toIso8601String().substring(0, 10),
-            'accommodation': acc.title,
-            'transport': trans.title,
-            'totalAmount': double.parse(_grandTotal.toStringAsFixed(2)),
-            'tourType': _useCustomPlan ? 'Build Your Own' : (_pkg?.name ?? ''),
-          },
-        ).ignore();
+        Future.microtask(() async {
+          try {
+            await Supabase.instance.client.functions.invoke(
+              'send-booking-receipt',
+              body: {
+                'email': email,
+                'reference': ref,
+                'guestCount': _guestCount,
+                'startDate': _startDate!.toIso8601String().substring(0, 10),
+                'endDate': _endDate!.toIso8601String().substring(0, 10),
+                'accommodation': acc.title,
+                'transport': trans.title,
+                'totalAmount': double.parse(_grandTotal.toStringAsFixed(2)),
+                'tourType': _useCustomPlan ? 'Build Your Own' : (_pkg?.name ?? ''),
+              },
+            );
+          } catch (_) {}
+        });
       }
       if (mounted) setState(() { _isProcessing = false; _bookingRef = ref; _bookingSuccess = true; });
     } catch (e) {

@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
+const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY') ?? ''
+const SENDER_EMAIL = Deno.env.get('SENDER_EMAIL') ?? 'spoonytraveltours@gmail.com'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,7 +31,7 @@ serve(async (req) => {
       maximumFractionDigits: 2,
     })
 
-    const html = `
+    const htmlContent = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -98,33 +99,27 @@ serve(async (req) => {
 </body>
 </html>`
 
-    const res = await fetch('https://api.resend.com/emails', {
+    await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'api-key': BREVO_API_KEY,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'Spoony Tours <onboarding@resend.dev>',
-        to: [email],
+        sender: { name: 'Spoony Tours', email: SENDER_EMAIL },
+        to: [{ email }],
         subject: `Booking Confirmed – ${reference} 🥄`,
-        html,
+        htmlContent,
       }),
     })
-
-    const data = await res.json()
-
-    if (!res.ok) {
-      throw new Error(JSON.stringify(data))
-    }
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), {
+    // Always return 200 — email is non-critical, booking is already saved
+    return new Response(JSON.stringify({ emailError: String(err) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
     })
   }
 })
