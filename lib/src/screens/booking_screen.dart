@@ -26,7 +26,7 @@ class BookingScreen extends StatefulWidget {
 class _BookingScreenState extends State<BookingScreen> {
   int _step = 1;
   TourType _tourType = TourType.joiner;
-  String? _packageId;
+  List<String?> _dayPackageIds = [];
   String _accommodationId = 'acc_standard';
   String _transportId = 'trans_shared_van';
   final Set<String> _selectedAddOnIds = {};
@@ -77,10 +77,18 @@ class _BookingScreenState extends State<BookingScreen> {
     } else {
       _dayPlans = _dayPlans.take(n).toList();
     }
+    if (_dayPackageIds.length < n) {
+      _dayPackageIds = [..._dayPackageIds, ...List.filled(n - _dayPackageIds.length, null)];
+    } else {
+      _dayPackageIds = _dayPackageIds.take(n).toList();
+    }
   }
 
-  TourPackage? get _pkg =>
-      _packageId == null ? null : tourPackages.firstWhere((p) => p.id == _packageId);
+  TourPackage? _dayPkg(int i) {
+    final id = i < _dayPackageIds.length ? _dayPackageIds[i] : null;
+    if (id == null) return null;
+    return tourPackages.firstWhere((p) => p.id == id, orElse: () => tourPackages.first);
+  }
 
   AccommodationOption get _accommodation =>
       _accommodations.firstWhere((a) => a.id == _accommodationId);
@@ -95,10 +103,14 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   double get _pkgTotal {
-    final p = _pkg;
-    if (p == null) return 0;
-    final ppx = _tourType == TourType.joiner ? p.joinerPricePerPerson : p.premiumPricePerPerson;
-    return ppx * _guestCount;
+    double total = 0;
+    for (int i = 0; i < _dayPackageIds.length; i++) {
+      final p = _dayPkg(i);
+      if (p == null) continue;
+      final ppx = _tourType == TourType.joiner ? p.joinerPricePerPerson : p.premiumPricePerPerson;
+      total += ppx * _guestCount;
+    }
+    return total;
   }
 
   double get _customSpotsTotal => _dayPlans.fold(0.0, (sum, day) =>
@@ -122,7 +134,7 @@ class _BookingScreenState extends State<BookingScreen> {
       case 1: return _startDate != null && _endDate != null;
       case 2:
         if (_useCustomPlan) return _dayPlans.any((d) => d.spotIds.isNotEmpty);
-        return _packageId != null;
+        return _dayPackageIds.any((id) => id != null);
       default: return true;
     }
   }
@@ -156,7 +168,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
   Future<void> _completeBooking() async {
     if (_startDate == null || _endDate == null) return;
-    if (!_useCustomPlan && _pkg == null) return;
+    if (!_useCustomPlan && _dayPackageIds.every((id) => id == null)) return;
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -168,6 +180,41 @@ class _BookingScreenState extends State<BookingScreen> {
     try {
       final ref = _generateRef();
       final email = user.email ?? '';
+
+      // Build tour_type label and per-day itinerary string
+      String tourTypeStr;
+      String itineraryStr;
+      if (_useCustomPlan) {
+        tourTypeStr = 'Build Your Own';
+        final lines = <String>[];
+        for (int i = 0; i < _nights; i++) {
+          if (i >= _dayPlans.length || _dayPlans[i].spotIds.isEmpty) {
+            lines.add('Day ${i + 1}: Free day');
+          } else {
+            final names = cebuDestinations
+                .where((d) => _dayPlans[i].spotIds.contains(d.id))
+                .map((d) => d.name)
+                .join(', ');
+            lines.add('Day ${i + 1}: $names');
+          }
+        }
+        itineraryStr = lines.join('\n');
+      } else {
+        final lines = <String>[];
+        final pkgNames = <String>{};
+        for (int i = 0; i < _nights; i++) {
+          final p = _dayPkg(i);
+          if (p == null) {
+            lines.add('Day ${i + 1}: No package selected');
+          } else {
+            pkgNames.add(p.name);
+            lines.add('Day ${i + 1}: ${p.name}');
+          }
+        }
+        tourTypeStr = pkgNames.isEmpty ? '' : (pkgNames.length == 1 ? pkgNames.first : pkgNames.join(', '));
+        itineraryStr = lines.join('\n');
+      }
+
       await Supabase.instance.client.from('bookings').insert({
         'user_id': user.id,
         'user_email': email,
@@ -177,7 +224,8 @@ class _BookingScreenState extends State<BookingScreen> {
         'total_amount': double.parse(_grandTotal.toStringAsFixed(2)),
         'accommodation_type': _accommodationId,
         'transport_type': _transportId,
-        'tour_type': _useCustomPlan ? 'Build Your Own' : (_pkg?.name ?? ''),
+        'tour_type': tourTypeStr,
+        'itinerary': itineraryStr,
         'reference_code': ref,
         'status': 'pending',
       });
@@ -204,7 +252,7 @@ class _BookingScreenState extends State<BookingScreen> {
                 'accommodation': acc.title,
                 'transport': trans.title,
                 'totalAmount': double.parse(_grandTotal.toStringAsFixed(2)),
-                'tourType': _useCustomPlan ? 'Build Your Own' : (_pkg?.name ?? ''),
+                'tourType': tourTypeStr,
               },
             );
           } catch (_) {}
@@ -374,7 +422,8 @@ class _BookingScreenState extends State<BookingScreen> {
 
   Widget _summaryPanel() {
     final fmt = DateFormat('MMM d');
-    final pkg = _pkg;
+    final selectedPkgCount = _dayPackageIds.where((id) => id != null).length;
+    final hasPkg = !_useCustomPlan && selectedPkgCount > 0;
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -423,12 +472,12 @@ class _BookingScreenState extends State<BookingScreen> {
               icon: Icons.map_outlined,
               label: 'Build Your Own · ${_dayPlans.where((d) => d.spotIds.isNotEmpty).length} day(s) planned',
             )
-          else if (pkg != null)
-            _SummaryRow(icon: Icons.tour_rounded, label: pkg.name),
+          else if (hasPkg)
+            _SummaryRow(icon: Icons.tour_rounded, label: 'Package · $selectedPkgCount day${selectedPkgCount > 1 ? 's' : ''} selected'),
           const Divider(height: 28),
           if (_useCustomPlan && _customSpotsTotal > 0)
             _SummaryCostRow(label: 'Custom destinations', value: '₱${_customSpotsTotal.toStringAsFixed(0)}')
-          else if (pkg != null)
+          else if (hasPkg)
             _SummaryCostRow(label: 'Package', value: '₱${_pkgTotal.toStringAsFixed(0)}'),
           _SummaryCostRow(label: 'Accommodation', value: '₱${_accTotal.toStringAsFixed(0)}'),
           _SummaryCostRow(label: 'Transport', value: '₱${_transTotal.toStringAsFixed(0)}'),
@@ -709,27 +758,130 @@ class _BookingScreenState extends State<BookingScreen> {
             _tourType == TourType.joiner ? 'Joiner Tour Packages' : 'Premium Exclusive Packages',
             style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _kDark),
           ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: ListView.separated(
-              itemCount: tourPackages.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 14),
-              itemBuilder: (ctx, i) {
-                final pkg = tourPackages[i];
-                final selected = pkg.id == _packageId;
-                final price = _tourType == TourType.joiner
-                    ? pkg.joinerPricePerPerson : pkg.premiumPricePerPerson;
-                return _PackageCard(
-                  package: pkg, price: price, selected: selected,
-                  tourType: _tourType, onTap: () => setState(() => _packageId = pkg.id),
-                );
-              },
-            ),
+          const SizedBox(height: 4),
+          Text(
+            'Select a package for each day of your trip ($_nights day${_nights > 1 ? 's' : ''}).',
+            style: const TextStyle(fontSize: 12, color: _kMid),
           ),
+          const SizedBox(height: 10),
+          Expanded(child: _buildPackageDayPlan()),
         ] else ...[
           Expanded(child: _buildCustomDayPlan()),
         ],
       ],
+    );
+  }
+
+  Widget _buildPackageDayPlan() {
+    if (_startDate == null || _endDate == null) {
+      return const Center(
+        child: Text('Please select your travel dates in Step 1.',
+            style: TextStyle(color: _kMid)),
+      );
+    }
+    return ListView.builder(
+      itemCount: _nights,
+      itemBuilder: (context, dayIndex) => _buildDayPackageCard(dayIndex),
+    );
+  }
+
+  Widget _buildDayPackageCard(int dayIndex) {
+    final selectedId = dayIndex < _dayPackageIds.length ? _dayPackageIds[dayIndex] : null;
+    final selectedPkg = selectedId == null
+        ? null
+        : tourPackages.firstWhere((p) => p.id == selectedId, orElse: () => tourPackages.first);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: selectedId != null ? _kOcean.withValues(alpha: 0.5) : const Color(0xFFE2E8F0),
+          width: selectedId != null ? 1.5 : 1,
+        ),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [_kOcean, _kTeal]),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text('Day ${dayIndex + 1}',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                selectedPkg != null ? selectedPkg.name : 'No package selected',
+                style: TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w600,
+                  color: selectedPkg != null ? _kOcean : _kMid,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ]),
+          const SizedBox(height: 12),
+          ...tourPackages.map((pkg) {
+            final sel = pkg.id == selectedId;
+            final price = _tourType == TourType.joiner
+                ? pkg.joinerPricePerPerson : pkg.premiumPricePerPerson;
+            return GestureDetector(
+              onTap: () => setState(() {
+                while (_dayPackageIds.length <= dayIndex) { _dayPackageIds.add(null); }
+                _dayPackageIds[dayIndex] = sel ? null : pkg.id;
+              }),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: sel ? _kOcean.withValues(alpha: 0.07) : Colors.white.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: sel ? _kOcean : const Color(0xFFE2E8F0), width: sel ? 1.5 : 1),
+                ),
+                child: Row(children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 20, height: 20,
+                    decoration: BoxDecoration(
+                      color: sel ? _kOcean : Colors.transparent,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: sel ? _kOcean : const Color(0xFFCBD5E1)),
+                    ),
+                    child: sel ? const Icon(Icons.check, color: Colors.white, size: 12) : null,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(pkg.name, style: TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w700,
+                      color: sel ? _kOcean : _kDark,
+                    )),
+                    Text(pkg.tagline,
+                        style: const TextStyle(fontSize: 11, color: _kMid),
+                        maxLines: 1, overflow: TextOverflow.ellipsis),
+                  ])),
+                  const SizedBox(width: 10),
+                  Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                    Text('₱${price.toInt()}',
+                        style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w700,
+                          color: sel ? _kOcean : _kMid,
+                        )),
+                    const Text('/person', style: TextStyle(fontSize: 10, color: _kMid)),
+                  ]),
+                ]),
+              ),
+            );
+          }),
+        ]),
+      ),
     );
   }
 
@@ -998,8 +1150,8 @@ class _BookingScreenState extends State<BookingScreen> {
   // ── Step 4: Review ────────────────────────────────────────────────────────
 
   Widget _buildReviewStep() {
-    final pkg = _pkg;
     final fmt = DateFormat('MMM d, yyyy');
+    final anyPkg = !_useCustomPlan && _dayPackageIds.any((id) => id != null);
     return _GlassCard(
       child: SingleChildScrollView(
         child: Column(
@@ -1009,7 +1161,7 @@ class _BookingScreenState extends State<BookingScreen> {
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _kDark)),
             const SizedBox(height: 20),
             // Experience summary header
-            if (!_useCustomPlan && pkg != null) ...[
+            if (anyPkg) ...[
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -1017,15 +1169,23 @@ class _BookingScreenState extends State<BookingScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: _kOcean.withValues(alpha: 0.2)),
                 ),
-                child: Row(children: [
-                  const Icon(Icons.tour_rounded, color: _kOcean, size: 26),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(pkg.name, style: const TextStyle(fontWeight: FontWeight.w800, color: _kOcean)),
-                    Text('${pkg.durationDays}-day · ${pkg.region} · '
-                        '${_tourType == TourType.joiner ? 'Joiner Tour' : 'Premium Exclusive'}',
-                        style: const TextStyle(fontSize: 12, color: _kMid)),
-                  ])),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Row(children: [
+                    Icon(Icons.tour_rounded, color: _kOcean, size: 20),
+                    SizedBox(width: 8),
+                    Text('Tour Packages — Day Plan',
+                        style: TextStyle(fontWeight: FontWeight.w800, color: _kOcean)),
+                  ]),
+                  const SizedBox(height: 8),
+                  for (int i = 0; i < _dayPackageIds.length; i++) ...[
+                    if (_dayPackageIds[i] != null) ...[
+                      Text(
+                        'Day ${i + 1}: ${tourPackages.firstWhere((p) => p.id == _dayPackageIds[i]).name}',
+                        style: const TextStyle(fontSize: 12, color: _kMid),
+                      ),
+                      const SizedBox(height: 2),
+                    ],
+                  ],
                 ]),
               ),
               const SizedBox(height: 16),
@@ -1063,7 +1223,12 @@ class _BookingScreenState extends State<BookingScreen> {
             _SummaryTile(label: 'Guests', value: '$_guestCount person(s) · $_nights night(s)'),
             if (!_useCustomPlan) ...[
               _SummaryTile(label: 'Tour type', value: _tourType == TourType.joiner ? 'Joiner Tour' : 'Premium Exclusive'),
-              _SummaryTile(label: 'Package', value: pkg?.name ?? '—'),
+              for (int i = 0; i < _dayPackageIds.length; i++)
+                if (_dayPackageIds[i] != null)
+                  _SummaryTile(
+                    label: 'Day ${i + 1} Package',
+                    value: tourPackages.firstWhere((p) => p.id == _dayPackageIds[i]).name,
+                  ),
             ],
             _SummaryTile(label: 'Accommodation', value: _accommodation.title),
             _SummaryTile(label: 'Transport', value: _transport.title),
@@ -1111,7 +1276,6 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Widget _buildCostBreakdown() {
-    final pkg = _pkg;
     final experienceLines = <Widget>[];
     if (_useCustomPlan) {
       for (int i = 0; i < _dayPlans.length; i++) {
@@ -1125,12 +1289,17 @@ class _BookingScreenState extends State<BookingScreen> {
           ));
         }
       }
-    } else if (pkg != null) {
-      experienceLines.add(_BreakdownLine(
-        label: 'Package (${pkg.name})',
-        value: '₱${_pkgTotal.toStringAsFixed(0)}',
-        sub: '₱${(_tourType == TourType.joiner ? pkg.joinerPricePerPerson : pkg.premiumPricePerPerson).toStringAsFixed(0)} × $_guestCount pax',
-      ));
+    } else {
+      for (int i = 0; i < _dayPackageIds.length; i++) {
+        final p = _dayPkg(i);
+        if (p == null) continue;
+        final ppx = _tourType == TourType.joiner ? p.joinerPricePerPerson : p.premiumPricePerPerson;
+        experienceLines.add(_BreakdownLine(
+          label: 'Day ${i + 1}: ${p.name}',
+          value: '₱${(ppx * _guestCount).toStringAsFixed(0)}',
+          sub: '₱${ppx.toStringAsFixed(0)} × $_guestCount pax',
+        ));
+      }
     }
 
     return Column(

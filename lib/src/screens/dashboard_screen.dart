@@ -672,6 +672,7 @@ class _TripCard extends StatefulWidget {
   final String accId;
   final String transId;
   final String tourType;
+  final String itinerary;
   final String startDate;
   final String endDate;
   final int guestCount;
@@ -687,6 +688,7 @@ class _TripCard extends StatefulWidget {
     required this.accId,
     required this.transId,
     required this.tourType,
+    required this.itinerary,
     required this.startDate,
     required this.endDate,
     required this.guestCount,
@@ -715,7 +717,8 @@ class _TripCard extends StatefulWidget {
       guests:      '$guestCount Adult${guestCount != 1 ? 's' : ''}',
       accId:       b['accommodation_type'] as String? ?? '',
       transId:     b['transport_type']     as String? ?? '',
-      tourType:    b['tour_type']          as String? ?? '',
+      tourType:    b['tour_type']           as String? ?? '',
+      itinerary:   b['itinerary']           as String? ?? '',
       startDate:   start,
       endDate:     end,
       guestCount:  guestCount,
@@ -792,10 +795,13 @@ class _TripCardState extends State<_TripCard> {
       final rowAlt  = PdfColor.fromHex('#F8FAFC');
       final white   = PdfColors.white;
 
-      // Look up package highlights
+      final isDIY = widget.tourType == 'Build Your Own';
+      final itineraryLines = widget.itinerary.isNotEmpty
+          ? widget.itinerary.split('\n').where((l) => l.trim().isNotEmpty).toList()
+          : <String>[];
+      // Fallback: package highlights for old bookings without itinerary data
       final pkg = tourPackages.where((p) => p.name == widget.tourType).firstOrNull;
       final highlights = pkg?.highlights ?? <String>[];
-      final isDIY = widget.tourType == 'Build Your Own';
 
       pw.Widget sectionLabel(String text) => pw.Padding(
         padding: const pw.EdgeInsets.only(bottom: 10),
@@ -916,7 +922,29 @@ class _TripCardState extends State<_TripCard> {
                 pw.SizedBox(height: 20),
 
                 // ── Itinerary / Highlights ─────────────────────────────
-                if (isDIY) ...[
+                if (itineraryLines.isNotEmpty) ...[
+                  sectionLabel(isDIY ? 'YOUR CUSTOM ITINERARY' : 'TOUR ITINERARY'),
+                  pw.Container(
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: border),
+                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                    ),
+                    child: pw.Column(
+                      children: itineraryLines.asMap().entries.map((e) =>
+                        pw.Container(
+                          color: e.key.isOdd ? rowAlt : white,
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          child: pw.Row(children: [
+                            pw.Container(width: 6, height: 6, decoration: pw.BoxDecoration(color: ocean, shape: pw.BoxShape.circle)),
+                            pw.SizedBox(width: 10),
+                            pw.Expanded(child: pw.Text(e.value,
+                                style: pw.TextStyle(fontSize: 10, color: dark))),
+                          ]),
+                        ),
+                      ).toList(),
+                    ),
+                  ),
+                ] else if (isDIY) ...[
                   sectionLabel('YOUR CUSTOM ITINERARY'),
                   pw.Container(
                     width: double.infinity,
