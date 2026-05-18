@@ -347,9 +347,9 @@ class _DriverScreenState extends State<DriverScreen> {
         child: Row(children: [
           _statusChip('All',       'all',       _kOcean,                   _trips.length),
           const SizedBox(width: 8),
-          _statusChip('Ongoing',   'pending',   const Color(0xFFFFC107),   _countByStatus('pending')),
+          _statusChip('Upcoming',    'pending',   const Color(0xFFFFC107),   _countByStatus('pending')),
           const SizedBox(width: 8),
-          _statusChip('Active',    'confirmed', const Color(0xFF50C878),   _countByStatus('confirmed')),
+          _statusChip('In Progress', 'confirmed', const Color(0xFF50C878),   _countByStatus('confirmed')),
           const SizedBox(width: 8),
           _statusChip('Completed', 'completed', _kTeal,                    _countByStatus('completed')),
           const SizedBox(width: 8),
@@ -488,13 +488,13 @@ class _TripCardState extends State<_TripCard> {
     final String statusLabel;
     switch (status) {
       case 'confirmed':
-        statusColor = const Color(0xFF50C878); statusLabel = 'ACTIVE';
+        statusColor = const Color(0xFF50C878); statusLabel = 'IN PROGRESS';
       case 'completed':
         statusColor = _kTeal; statusLabel = 'COMPLETED';
       case 'cancelled':
         statusColor = const Color(0xFFFF6B4A); statusLabel = 'CANCELLED';
       default:
-        statusColor = const Color(0xFFFFC107); statusLabel = 'ONGOING';
+        statusColor = const Color(0xFFFFC107); statusLabel = 'UPCOMING';
     }
 
     final itineraryLines = itinerary

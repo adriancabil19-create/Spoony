@@ -111709,7 +111709,7 @@ k=l?B.T:B.ao
 l=l?B.T:B.aX
 l=A.b([n,B.ba,A.Fw(B.a_2,m,new A.aDu(j),A.yb(i,i,i,i,i,i,i,i,i,k,i,i,B.lM,i,new A.bf(A.W(10),B.Q),new A.aF(l,1,B.X,-1),i,i,i,i))],e)
 if(j.Q!=null)B.l.K(l,A.b([B.fa,A.dr(i,i,B.ZT,i,i,new A.aDv(j),i,i,"Clear date filter")],e))
-q=A.b([q,B.uu,B.b2w,B.b5,B.b1m,B.bj,p,B.uv,o,B.bj,A.af(l,B.G,B.v,B.x,0),B.bj,A.fS(A.af(A.b([j.xm("All","all",B.T,J.bl(j.e)),B.aV,j.xm("Ongoing","pending",B.ja,j.Bn("pending")),B.aV,j.xm("Active",h,B.cg,j.Bn(h)),B.aV,j.xm("Completed",g,B.aC,j.Bn(g)),B.aV,j.xm("Cancelled",f,B.bE,j.Bn(f))],e),B.G,B.v,B.x,0),i,i,B.aH),B.bd],e)
+q=A.b([q,B.uu,B.b2w,B.b5,B.b1m,B.bj,p,B.uv,o,B.bj,A.af(l,B.G,B.v,B.x,0),B.bj,A.fS(A.af(A.b([j.xm("All","all",B.T,J.bl(j.e)),B.aV,j.xm("Upcoming","pending",B.ja,j.Bn("pending")),B.aV,j.xm("In Progress",h,B.cg,j.Bn(h)),B.aV,j.xm("Completed",g,B.aC,j.Bn(g)),B.aV,j.xm("Cancelled",f,B.bE,j.Bn(f))],e),B.G,B.v,B.x,0),i,i,B.aH),B.bd],e)
 if(J.eC(j.gJo())){p=A.W(16)
 o=A.bJ(B.aX,1)
 n=A.L(J.eC(j.e)?"No trips assigned yet.":"No trips match your search.",i,i,i,B.aXa,i,i,i)
@@ -111873,7 +111873,7 @@ if(e==null)e=""
 d=A.ah(b1.h(b0,"transport_id"))
 if(d==null)d=""
 switch(r){case"confirmed":c=B.cg
-b="ACTIVE"
+b="IN PROGRESS"
 break
 case"completed":c=B.aC
 b="COMPLETED"
@@ -111882,7 +111882,7 @@ case"cancelled":c=B.bE
 b="CANCELLED"
 break
 default:c=B.ja
-b="ONGOING"}b1=new A.a9(A.b(h.split("\n"),t.s),new A.aOI(),t.a4).AR(0,new A.aOJ())
+b="UPCOMING"}b1=new A.a9(A.b(h.split("\n"),t.s),new A.aOI(),t.a4).AR(0,new A.aOJ())
 a=A.a_(b1,b1.$ti.i("p.E"))
 a0=A.cF("^Day (\\d+): (.+)$",!0,!1)
 b1=A.W(14)
