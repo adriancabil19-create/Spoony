@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../services/api_service.dart';
+import '../data/cebu_data.dart';
 import 'home_screen.dart';
 import 'auth_screen.dart';
 
@@ -786,19 +787,34 @@ class _TripCardState extends State<_TripCard> {
       final teal    = PdfColor.fromHex('#14B8A6');
       final dark    = PdfColor.fromHex('#0F172A');
       final mid     = PdfColor.fromHex('#64748B');
-      final lightBg = PdfColor.fromHex('#F0F9FF');
+      final light   = PdfColor.fromHex('#F0F9FF');
       final border  = PdfColor.fromHex('#E2E8F0');
       final rowAlt  = PdfColor.fromHex('#F8FAFC');
+      final white   = PdfColors.white;
+
+      // Look up package highlights
+      final pkg = tourPackages.where((p) => p.name == widget.tourType).firstOrNull;
+      final highlights = pkg?.highlights ?? <String>[];
+      final isDIY = widget.tourType == 'Build Your Own';
+
+      pw.Widget sectionLabel(String text) => pw.Padding(
+        padding: const pw.EdgeInsets.only(bottom: 10),
+        child: pw.Row(children: [
+          pw.Container(width: 4, height: 14, color: ocean),
+          pw.SizedBox(width: 8),
+          pw.Text(text, style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: dark, letterSpacing: 1)),
+        ]),
+      );
 
       pw.Widget detailRow(String label, String value, {bool alt = false, PdfColor? valueColor}) =>
         pw.Container(
-          color: alt ? rowAlt : PdfColors.white,
-          padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+          color: alt ? rowAlt : white,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 11),
           child: pw.Row(children: [
-            pw.SizedBox(width: 160,
-              child: pw.Text(label, style: pw.TextStyle(fontSize: 11, color: mid))),
+            pw.SizedBox(width: 150,
+              child: pw.Text(label, style: pw.TextStyle(fontSize: 10, color: mid))),
             pw.Expanded(child: pw.Text(value,
-                style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: valueColor ?? dark))),
+                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold, color: valueColor ?? dark))),
           ]),
         );
 
@@ -808,82 +824,147 @@ class _TripCardState extends State<_TripCard> {
         build: (ctx) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
+            // ── Header ────────────────────────────────────────────────
             pw.Container(
               width: double.infinity,
-              padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
               color: ocean,
-              child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                pw.Text('Spoony Travel and Tours',
-                    style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-                pw.SizedBox(height: 4),
-                pw.Text('BOOKING ITINERARY',
-                    style: pw.TextStyle(fontSize: 12, color: const PdfColor(1, 1, 1, 0.75), letterSpacing: 2)),
-              ]),
-            ),
-            pw.Expanded(child: pw.Padding(
-              padding: const pw.EdgeInsets.all(48),
-              child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                pw.Container(
-                  width: double.infinity,
-                  padding: const pw.EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                  decoration: pw.BoxDecoration(
-                    color: lightBg,
-                    border: pw.Border.all(color: PdfColor.fromHex('#BAE6FD')),
-                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
-                  ),
-                  child: pw.Column(children: [
-                    pw.Text('BOOKING REFERENCE',
-                        style: pw.TextStyle(fontSize: 10, color: ocean, fontWeight: pw.FontWeight.bold, letterSpacing: 1)),
-                    pw.SizedBox(height: 8),
-                    pw.Text(widget.ref,
-                        style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold, color: dark, letterSpacing: 3)),
+              child: pw.Stack(children: [
+                pw.Positioned(right: 0, top: 0, bottom: 0,
+                  child: pw.Container(width: 120, color: teal)),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 36),
+                  child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                    pw.Text('Spoony Travel and Tours',
+                        style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: white)),
+                    pw.SizedBox(height: 4),
+                    pw.Text('OFFICIAL BOOKING ITINERARY',
+                        style: pw.TextStyle(fontSize: 9, color: const PdfColor(1,1,1,0.8), letterSpacing: 2)),
                   ]),
                 ),
-                pw.SizedBox(height: 32),
-                pw.Text('BOOKING DETAILS',
-                    style: pw.TextStyle(fontSize: 10, color: mid, fontWeight: pw.FontWeight.bold, letterSpacing: 1)),
-                pw.SizedBox(height: 12),
+              ]),
+            ),
+
+            pw.Expanded(child: pw.Padding(
+              padding: const pw.EdgeInsets.fromLTRB(48, 36, 48, 36),
+              child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+
+                // ── Reference + Tour name row ──────────────────────────
+                pw.Row(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(16),
+                      decoration: pw.BoxDecoration(
+                        color: light,
+                        border: pw.Border.all(color: PdfColor.fromHex('#BAE6FD')),
+                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                      ),
+                      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                        pw.Text('BOOKING REFERENCE',
+                            style: pw.TextStyle(fontSize: 8, color: ocean, fontWeight: pw.FontWeight.bold, letterSpacing: 1)),
+                        pw.SizedBox(height: 6),
+                        pw.Text(widget.ref,
+                            style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold, color: dark, letterSpacing: 2)),
+                      ]),
+                    ),
+                  ),
+                  pw.SizedBox(width: 16),
+                  pw.Expanded(
+                    child: pw.Container(
+                      padding: const pw.EdgeInsets.all(16),
+                      decoration: pw.BoxDecoration(
+                        color: rowAlt,
+                        border: pw.Border.all(color: border),
+                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                      ),
+                      child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                        pw.Text('TOUR',
+                            style: pw.TextStyle(fontSize: 8, color: mid, fontWeight: pw.FontWeight.bold, letterSpacing: 1)),
+                        pw.SizedBox(height: 6),
+                        pw.Text(isDIY ? 'Custom DIY Tour' : (widget.tourType.isNotEmpty ? widget.tourType : widget.title),
+                            style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: dark)),
+                      ]),
+                    ),
+                  ),
+                ]),
+                pw.SizedBox(height: 24),
+
+                // ── Booking Details ────────────────────────────────────
+                sectionLabel('BOOKING DETAILS'),
                 pw.Container(
                   decoration: pw.BoxDecoration(
                     border: pw.Border.all(color: border),
                     borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
                   ),
                   child: pw.Column(children: [
-                    detailRow('Tour Package',  widget.tourType.isNotEmpty ? widget.tourType : widget.title),
-                    detailRow('Check-in',      widget.startDate, alt: true),
-                    detailRow('Check-out',     widget.endDate),
-                    detailRow('Guests',        widget.guests, alt: true),
-                    detailRow('Accommodation', _accLabel),
-                    detailRow('Transport',     _transLabel, alt: true),
-                    detailRow('Total Amount',  widget.amount, valueColor: teal),
-                  ]),
-                ),
-                pw.SizedBox(height: 28),
-                pw.Container(
-                  padding: const pw.EdgeInsets.all(20),
-                  decoration: pw.BoxDecoration(
-                    color: lightBg,
-                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
-                  ),
-                  child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                    pw.Text('Important Information',
-                        style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: dark)),
-                    pw.SizedBox(height: 8),
-                    pw.Text(
-                      'Please bring this itinerary on the day of your tour. '
-                      'Our team will contact you to confirm pickup details and meeting point.',
-                      style: pw.TextStyle(fontSize: 11, color: mid, lineSpacing: 3),
+                    detailRow('Check-in',      widget.startDate),
+                    detailRow('Check-out',     widget.endDate,      alt: true),
+                    detailRow('Guests',        widget.guests),
+                    detailRow('Accommodation', _accLabel,           alt: true),
+                    detailRow('Transport',     _transLabel),
+                    pw.Container(
+                      color: teal,
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: pw.Row(children: [
+                        pw.SizedBox(width: 150,
+                          child: pw.Text('Total Amount', style: pw.TextStyle(fontSize: 10, color: white, fontWeight: pw.FontWeight.bold))),
+                        pw.Expanded(child: pw.Text(widget.amount,
+                            style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: white))),
+                      ]),
                     ),
                   ]),
                 ),
+                pw.SizedBox(height: 20),
+
+                // ── Itinerary / Highlights ─────────────────────────────
+                if (isDIY) ...[
+                  sectionLabel('YOUR CUSTOM ITINERARY'),
+                  pw.Container(
+                    width: double.infinity,
+                    padding: const pw.EdgeInsets.all(16),
+                    decoration: pw.BoxDecoration(
+                      color: light,
+                      border: pw.Border.all(color: border),
+                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                    ),
+                    child: pw.Text(
+                      'You have selected a custom DIY tour. Our team will contact you to finalize your personalized itinerary based on your preferences.',
+                      style: pw.TextStyle(fontSize: 10, color: mid, lineSpacing: 4),
+                    ),
+                  ),
+                ] else if (highlights.isNotEmpty) ...[
+                  sectionLabel('TOUR HIGHLIGHTS'),
+                  pw.Container(
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: border),
+                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                    ),
+                    child: pw.Column(
+                      children: highlights.asMap().entries.map((e) =>
+                        pw.Container(
+                          color: e.key.isOdd ? rowAlt : white,
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          child: pw.Row(children: [
+                            pw.Container(width: 6, height: 6, decoration: pw.BoxDecoration(color: ocean, shape: pw.BoxShape.circle)),
+                            pw.SizedBox(width: 10),
+                            pw.Expanded(child: pw.Text(e.value,
+                                style: pw.TextStyle(fontSize: 10, color: dark))),
+                          ]),
+                        ),
+                      ).toList(),
+                    ),
+                  ),
+                ],
+
                 pw.Spacer(),
-                pw.Divider(color: border),
+
+                // ── Footer ────────────────────────────────────────────
+                pw.Container(height: 1, color: border),
                 pw.SizedBox(height: 10),
                 pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
                   pw.Text('Spoony Tours · Cebu, Philippines',
-                      style: pw.TextStyle(fontSize: 10, color: mid)),
+                      style: pw.TextStyle(fontSize: 9, color: mid)),
                   pw.Text('spoonytraveltours@gmail.com',
-                      style: pw.TextStyle(fontSize: 10, color: ocean)),
+                      style: pw.TextStyle(fontSize: 9, color: ocean)),
                 ]),
               ]),
             )),
