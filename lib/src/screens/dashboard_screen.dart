@@ -820,7 +820,7 @@ class _TripCardState extends State<_TripCard> {
                     style: pw.TextStyle(fontSize: 12, color: const PdfColor(1, 1, 1, 0.75), letterSpacing: 2)),
               ]),
             ),
-            pw.Padding(
+            pw.Expanded(child: pw.Padding(
               padding: const pw.EdgeInsets.all(48),
               child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
                 pw.Container(
@@ -886,7 +886,7 @@ class _TripCardState extends State<_TripCard> {
                       style: pw.TextStyle(fontSize: 10, color: ocean)),
                 ]),
               ]),
-            ),
+            )),
           ],
         ),
       ));
