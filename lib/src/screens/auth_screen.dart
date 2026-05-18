@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../screens/home_screen.dart';
+import '../screens/driver_screen.dart';
 import '../recovery_flag.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -45,7 +46,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       if (!_isPasswordRecovery) {
         final session = Supabase.instance.client.auth.currentSession;
         if (session != null && mounted) {
-          Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+          _navigateAfterLogin(session.user);
         }
       }
     });
@@ -70,8 +71,27 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         setState(() => _errorMessage = 'Not authorized as admin.');
         return;
       }
-      Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+      _navigateAfterLogin(user);
     });
+  }
+
+  Future<void> _navigateAfterLogin(User user) async {
+    if (!mounted) return;
+    // Check driver table first (before navigating)
+    try {
+      final driverRow = await Supabase.instance.client
+          .from('drivers')
+          .select('id')
+          .eq('email', user.email ?? '')
+          .maybeSingle();
+      if (!mounted) return;
+      if (driverRow != null) {
+        Navigator.pushReplacementNamed(context, DriverScreen.routeName);
+        return;
+      }
+    } catch (_) {}
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, HomeScreen.routeName);
   }
 
   @override

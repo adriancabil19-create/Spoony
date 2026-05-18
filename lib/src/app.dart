@@ -6,6 +6,7 @@ import 'screens/explore_screen.dart';
 import 'screens/booking_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/admin_screen.dart';
+import 'screens/driver_screen.dart';
 
 class _FadePageTransition extends PageTransitionsBuilder {
   const _FadePageTransition();
@@ -77,6 +78,7 @@ class SpoonyApp extends StatelessWidget {
             BookingScreen.routeName: (context) => const BookingScreen(),
             DashboardScreen.routeName: (context) => const DashboardScreen(),
             AdminScreen.routeName: (context) => const AdminScreen(),
+            DriverScreen.routeName: (context) => const DriverScreen(),
           },
         );
   }

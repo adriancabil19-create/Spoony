@@ -30,7 +30,10 @@ class _BookingScreenState extends State<BookingScreen> {
   String _accommodationId = 'acc_standard';
   String _transportId = 'trans_shared_van';
   final Set<String> _selectedAddOnIds = {};
-  int _guestCount = 2;
+  int _adultCount = 2;
+  int _kidCount = 0;
+  int _toddlerCount = 0;
+  int get _guestCount => _adultCount + _kidCount + _toddlerCount;
   DateTime? _startDate;
   DateTime? _endDate;
   bool _bookingSuccess = false;
@@ -108,7 +111,9 @@ class _BookingScreenState extends State<BookingScreen> {
       final p = _dayPkg(i);
       if (p == null) continue;
       final ppx = _tourType == TourType.joiner ? p.joinerPricePerPerson : p.premiumPricePerPerson;
-      total += ppx * _guestCount;
+      total += ppx * _adultCount;
+      total += ppx * 0.7 * _kidCount;   // kids 70%
+      // toddlers (0-3) are free for packages
     }
     return total;
   }
@@ -116,13 +121,13 @@ class _BookingScreenState extends State<BookingScreen> {
   double get _customSpotsTotal => _dayPlans.fold(0.0, (sum, day) =>
       sum + cebuDestinations
           .where((d) => day.spotIds.contains(d.id))
-          .fold(0.0, (s, d) => s + d.entranceFee * _guestCount));
+          .fold(0.0, (s, d) => s + d.entranceFee * (_adultCount + _kidCount)));
 
   double get _addOnsTotal => tourAddOns
       .where((a) => _selectedAddOnIds.contains(a.id))
-      .fold(0.0, (sum, a) => sum + (a.perPerson ? a.price * _guestCount : a.price));
+      .fold(0.0, (sum, a) => sum + (a.perPerson ? a.price * (_adultCount + _kidCount) : a.price));
 
-  double get _accTotal => _accommodation.nightlyRate * _guestCount * _nights;
+  double get _accTotal => _accommodation.nightlyRate * (_adultCount + _kidCount) * _nights;
   double get _transTotal => _transport.price;
   double get _grandTotal {
     final base = _useCustomPlan ? _customSpotsTotal : _pkgTotal;
@@ -219,6 +224,9 @@ class _BookingScreenState extends State<BookingScreen> {
         'user_id': user.id,
         'user_email': email,
         'guest_count': _guestCount,
+        'adult_count': _adultCount,
+        'kid_count': _kidCount,
+        'toddler_count': _toddlerCount,
         'start_date': _startDate!.toIso8601String().substring(0, 10),
         'end_date': _endDate!.toIso8601String().substring(0, 10),
         'total_amount': double.parse(_grandTotal.toStringAsFixed(2)),
@@ -461,7 +469,9 @@ class _BookingScreenState extends State<BookingScreen> {
           ),
           _SummaryRow(
             icon: Icons.group,
-            label: '$_guestCount Guest${_guestCount > 1 ? 's' : ''}',
+            label: '$_adultCount Adult${_adultCount != 1 ? 's' : ''}'
+                '${_kidCount > 0 ? ' · $_kidCount Kid${_kidCount != 1 ? 's' : ''}' : ''}'
+                '${_toddlerCount > 0 ? ' · $_toddlerCount Toddler${_toddlerCount != 1 ? 's' : ''}' : ''}',
           ),
           _SummaryRow(
             icon: _tourType == TourType.joiner ? Icons.group_outlined : Icons.star_outlined,
@@ -496,6 +506,9 @@ class _BookingScreenState extends State<BookingScreen> {
           const SizedBox(height: 4),
           Text('$_nights night(s) · $_guestCount guest(s)',
               style: const TextStyle(fontSize: 11, color: _kMid)),
+          if (_toddlerCount > 0)
+            const Text('Toddlers stay & tour free of charge',
+                style: TextStyle(fontSize: 11, color: _kTeal)),
         ],
       ),
     );
@@ -535,26 +548,33 @@ class _BookingScreenState extends State<BookingScreen> {
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _kDark)),
             const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
-              child: Row(children: [
-                IconButton(
-                  onPressed: () => setState(() { if (_guestCount > 1) _guestCount--; }),
-                  icon: const Icon(Icons.remove_circle_outline, color: _kOcean),
+              child: Column(children: [
+                _GuestCounterRow(
+                  label: 'Adults', sublabel: '18+ years · full price',
+                  count: _adultCount,
+                  onDecrement: () => setState(() { if (_adultCount > 1) _adultCount--; }),
+                  onIncrement: () => setState(() => _adultCount++),
                 ),
-                Expanded(
-                  child: Center(
-                    child: Text('$_guestCount Guest${_guestCount > 1 ? 's' : ''}',
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _kDark)),
-                  ),
+                const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                _GuestCounterRow(
+                  label: 'Kids', sublabel: '4–17 years · 70% price',
+                  count: _kidCount,
+                  onDecrement: () => setState(() { if (_kidCount > 0) _kidCount--; }),
+                  onIncrement: () => setState(() => _kidCount++),
                 ),
-                IconButton(
-                  onPressed: () => setState(() => _guestCount++),
-                  icon: const Icon(Icons.add_circle_outline, color: _kOcean),
+                const Divider(height: 20, color: Color(0xFFE2E8F0)),
+                _GuestCounterRow(
+                  label: 'Toddlers', sublabel: '0–3 years · free of charge',
+                  count: _toddlerCount,
+                  onDecrement: () => setState(() { if (_toddlerCount > 0) _toddlerCount--; }),
+                  onIncrement: () => setState(() => _toddlerCount++),
+                  freeLabel: true,
                 ),
               ]),
             ),
@@ -915,7 +935,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
     final dayTotal = cebuDestinations
         .where((d) => day.spotIds.contains(d.id))
-        .fold(0.0, (s, d) => s + d.entranceFee * _guestCount);
+        .fold(0.0, (s, d) => s + d.entranceFee * (_adultCount + _kidCount));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -1029,7 +1049,7 @@ class _BookingScreenState extends State<BookingScreen> {
                         ),
                       ])),
                       if (sel)
-                        Text('₱${(spot.entranceFee * _guestCount).toStringAsFixed(0)}',
+                        Text('₱${(spot.entranceFee * (_adultCount + _kidCount)).toStringAsFixed(0)}',
                             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kTeal)),
                     ]),
                   ),
@@ -1062,7 +1082,7 @@ class _BookingScreenState extends State<BookingScreen> {
               _AddOnTile(
                 addOn: addOn,
                 selected: _selectedAddOnIds.contains(addOn.id),
-                guests: _guestCount,
+                guests: _adultCount + _kidCount,
                 onToggle: () => setState(() {
                   _selectedAddOnIds.contains(addOn.id)
                       ? _selectedAddOnIds.remove(addOn.id)
@@ -1220,7 +1240,13 @@ class _BookingScreenState extends State<BookingScreen> {
               value: '${_startDate != null ? fmt.format(_startDate!) : '—'} → '
                   '${_endDate != null ? fmt.format(_endDate!) : '—'}',
             ),
-            _SummaryTile(label: 'Guests', value: '$_guestCount person(s) · $_nights night(s)'),
+            _SummaryTile(
+              label: 'Guests',
+              value: '$_adultCount Adult${_adultCount != 1 ? 's' : ''}'
+                  '${_kidCount > 0 ? ', $_kidCount Kid${_kidCount != 1 ? 's' : ''}' : ''}'
+                  '${_toddlerCount > 0 ? ', $_toddlerCount Toddler${_toddlerCount != 1 ? 's' : ''} (free)' : ''}'
+                  ' · $_nights night(s)',
+            ),
             if (!_useCustomPlan) ...[
               _SummaryTile(label: 'Tour type', value: _tourType == TourType.joiner ? 'Joiner Tour' : 'Premium Exclusive'),
               for (int i = 0; i < _dayPackageIds.length; i++)
@@ -1281,11 +1307,11 @@ class _BookingScreenState extends State<BookingScreen> {
       for (int i = 0; i < _dayPlans.length; i++) {
         if (_dayPlans[i].spotIds.isNotEmpty) {
           final spots = cebuDestinations.where((d) => _dayPlans[i].spotIds.contains(d.id)).toList();
-          final dayTotal = spots.fold(0.0, (s, d) => s + d.entranceFee * _guestCount);
+          final dayTotal = spots.fold(0.0, (s, d) => s + d.entranceFee * (_adultCount + _kidCount));
           experienceLines.add(_BreakdownLine(
             label: 'Day ${i + 1} destinations',
             value: '₱${dayTotal.toStringAsFixed(0)}',
-            sub: '${spots.length} spot${spots.length > 1 ? 's' : ''} × $_guestCount pax',
+            sub: '${spots.length} spot${spots.length > 1 ? 's' : ''} × ${_adultCount + _kidCount} pax',
           ));
         }
       }
@@ -1294,10 +1320,13 @@ class _BookingScreenState extends State<BookingScreen> {
         final p = _dayPkg(i);
         if (p == null) continue;
         final ppx = _tourType == TourType.joiner ? p.joinerPricePerPerson : p.premiumPricePerPerson;
+        final dayTotal = ppx * _adultCount + ppx * 0.7 * _kidCount;
+        final subParts = <String>['$_adultCount adult${_adultCount != 1 ? 's' : ''} × ₱${ppx.toStringAsFixed(0)}'];
+        if (_kidCount > 0) subParts.add('$_kidCount kid${_kidCount != 1 ? 's' : ''} × ₱${(ppx * 0.7).toStringAsFixed(0)}');
         experienceLines.add(_BreakdownLine(
           label: 'Day ${i + 1}: ${p.name}',
-          value: '₱${(ppx * _guestCount).toStringAsFixed(0)}',
-          sub: '₱${ppx.toStringAsFixed(0)} × $_guestCount pax',
+          value: '₱${dayTotal.toStringAsFixed(0)}',
+          sub: subParts.join(', '),
         ));
       }
     }
@@ -1316,7 +1345,7 @@ class _BookingScreenState extends State<BookingScreen> {
         _BreakdownLine(
           label: 'Accommodation (${_accommodation.title})',
           value: '₱${_accTotal.toStringAsFixed(0)}',
-          sub: '₱${_accommodation.nightlyRate.toStringAsFixed(0)} × $_guestCount pax × $_nights nights',
+          sub: '₱${_accommodation.nightlyRate.toStringAsFixed(0)} × ${_adultCount + _kidCount} pax × $_nights nights',
         ),
         _BreakdownLine(
           label: 'Transport (${_transport.title})',
@@ -1904,6 +1933,58 @@ class _PaymentChip extends StatelessWidget {
 }
 
 // ── Day plan model ────────────────────────────────────────────────────────────
+
+// ── Guest counter row ─────────────────────────────────────────────────────────
+
+class _GuestCounterRow extends StatelessWidget {
+  final String label;
+  final String sublabel;
+  final int count;
+  final VoidCallback onDecrement;
+  final VoidCallback onIncrement;
+  final bool freeLabel;
+
+  const _GuestCounterRow({
+    required this.label, required this.sublabel, required this.count,
+    required this.onDecrement, required this.onIncrement, this.freeLabel = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: [
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark)),
+          Text(sublabel, style: TextStyle(
+            fontSize: 11,
+            color: freeLabel ? _kTeal : _kMid,
+            fontWeight: freeLabel ? FontWeight.w600 : FontWeight.normal,
+          )),
+        ]),
+      ),
+      IconButton(
+        onPressed: onDecrement,
+        icon: Icon(Icons.remove_circle_outline,
+            color: count > 0 ? _kOcean : const Color(0xFFCBD5E1)),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      ),
+      SizedBox(
+        width: 36,
+        child: Center(
+          child: Text('$count',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _kDark)),
+        ),
+      ),
+      IconButton(
+        onPressed: onIncrement,
+        icon: const Icon(Icons.add_circle_outline, color: _kOcean),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+      ),
+    ]);
+  }
+}
 
 class _DayPlan {
   final DestinationRegion? region;

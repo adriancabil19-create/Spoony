@@ -812,6 +812,70 @@ class _TripCardState extends State<_TripCard> {
         }
       }
 
+      // Pre-build itinerary widgets (avoids IIFE issues in pdf package)
+      final itineraryWidgets = <pw.Widget>[];
+      if (itineraryLines.isNotEmpty) {
+        final dayRegex = RegExp(r'^Day (\d+): (.+)$');
+        bool firstDay = true;
+        for (final line in itineraryLines) {
+          final m = dayRegex.firstMatch(line.trim());
+          if (m == null) continue;
+          final dayNum = m.group(1)!;
+          final content = m.group(2)!;
+          final matchedPkg = tourPackages.where((p) => p.name == content).firstOrNull;
+          final items = matchedPkg != null
+              ? matchedPkg.highlights
+              : content.split(', ').where((s) => s.trim().isNotEmpty && s != 'Free day' && s != 'No package selected').toList();
+
+          if (!firstDay) {
+            itineraryWidgets.add(pw.Container(height: 1, color: border));
+          }
+          firstDay = false;
+
+          itineraryWidgets.add(pw.Container(
+            color: white,
+            padding: const pw.EdgeInsets.fromLTRB(16, 12, 16, 6),
+            child: pw.Row(children: [
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: pw.BoxDecoration(
+                  color: ocean,
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+                ),
+                child: pw.Text('Day $dayNum',
+                    style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: white)),
+              ),
+              pw.SizedBox(width: 10),
+              pw.Expanded(child: pw.Text(content,
+                  style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: dark))),
+            ]),
+          ));
+
+          if (items.isEmpty) {
+            itineraryWidgets.add(pw.Container(
+              color: rowAlt,
+              padding: const pw.EdgeInsets.fromLTRB(36, 5, 16, 10),
+              child: pw.Text('Free day / No destinations selected',
+                  style: pw.TextStyle(fontSize: 9, color: mid)),
+            ));
+          } else {
+            for (final item in items) {
+              itineraryWidgets.add(pw.Container(
+                color: rowAlt,
+                padding: const pw.EdgeInsets.fromLTRB(36, 5, 16, 5),
+                child: pw.Row(children: [
+                  pw.Container(width: 5, height: 5,
+                      decoration: pw.BoxDecoration(color: teal, shape: pw.BoxShape.circle)),
+                  pw.SizedBox(width: 8),
+                  pw.Expanded(child: pw.Text(item,
+                      style: pw.TextStyle(fontSize: 9, color: mid))),
+                ]),
+              ));
+            }
+          }
+        }
+      }
+
       pw.Widget sectionLabel(String text) => pw.Padding(
         padding: const pw.EdgeInsets.only(bottom: 10),
         child: pw.Row(children: [
@@ -922,7 +986,7 @@ class _TripCardState extends State<_TripCard> {
                       child: pw.Row(children: [
                         pw.SizedBox(width: 150,
                           child: pw.Text('Total Amount', style: pw.TextStyle(fontSize: 10, color: white, fontWeight: pw.FontWeight.bold))),
-                        pw.Expanded(child: pw.Text(widget.amount,
+                        pw.Expanded(child: pw.Text(widget.amount.replaceAll('₱', 'PHP '),
                             style: pw.TextStyle(fontSize: 13, fontWeight: pw.FontWeight.bold, color: white))),
                       ]),
                     ),
@@ -931,77 +995,14 @@ class _TripCardState extends State<_TripCard> {
                 pw.SizedBox(height: 20),
 
                 // ── Itinerary / Highlights ─────────────────────────────
-                if (itineraryLines.isNotEmpty) ...[
+                if (itineraryWidgets.isNotEmpty) ...[
                   sectionLabel(isDIY ? 'YOUR CUSTOM ITINERARY' : 'TOUR ITINERARY'),
                   pw.Container(
                     decoration: pw.BoxDecoration(
                       border: pw.Border.all(color: border),
                       borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
                     ),
-                    child: pw.Column(children: () {
-                      final dayRegex = RegExp(r'^Day (\d+): (.+)$');
-                      final widgets = <pw.Widget>[];
-                      bool firstDay = true;
-                      for (final line in itineraryLines) {
-                        final m = dayRegex.firstMatch(line.trim());
-                        if (m == null) continue;
-                        final dayNum = m.group(1)!;
-                        final content = m.group(2)!;
-                        final matchedPkg = tourPackages.where((p) => p.name == content).firstOrNull;
-                        final items = matchedPkg != null
-                            ? matchedPkg.highlights
-                            : content.split(', ').where((s) => s.trim().isNotEmpty && s != 'Free day').toList();
-
-                        if (!firstDay) {
-                          widgets.add(pw.Container(height: 1, color: border));
-                        }
-                        firstDay = false;
-
-                        // Day header row
-                        widgets.add(pw.Container(
-                          color: white,
-                          padding: const pw.EdgeInsets.fromLTRB(16, 12, 16, 6),
-                          child: pw.Row(children: [
-                            pw.Container(
-                              padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: pw.BoxDecoration(
-                                color: ocean,
-                                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
-                              ),
-                              child: pw.Text('Day $dayNum',
-                                  style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: white)),
-                            ),
-                            pw.SizedBox(width: 10),
-                            pw.Expanded(child: pw.Text(content,
-                                style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: dark))),
-                          ]),
-                        ));
-
-                        // Sub-items
-                        for (final item in items) {
-                          widgets.add(pw.Container(
-                            color: rowAlt,
-                            padding: const pw.EdgeInsets.fromLTRB(36, 5, 16, 5),
-                            child: pw.Row(children: [
-                              pw.Container(width: 5, height: 5,
-                                  decoration: pw.BoxDecoration(color: teal, shape: pw.BoxShape.circle)),
-                              pw.SizedBox(width: 8),
-                              pw.Expanded(child: pw.Text(item,
-                                  style: pw.TextStyle(fontSize: 9, color: mid))),
-                            ]),
-                          ));
-                        }
-                        if (items.isEmpty) {
-                          widgets.add(pw.Container(
-                            color: rowAlt,
-                            padding: const pw.EdgeInsets.fromLTRB(36, 5, 16, 5),
-                            child: pw.Text('Free day / No destinations selected',
-                                style: pw.TextStyle(fontSize: 9, color: mid)),
-                          ));
-                        }
-                      }
-                      return widgets;
-                    }()),
+                    child: pw.Column(children: itineraryWidgets),
                   ),
                 ] else if (isDIY) ...[
                   sectionLabel('YOUR CUSTOM ITINERARY'),
