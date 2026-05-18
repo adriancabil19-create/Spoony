@@ -177,6 +177,7 @@ class _BookingScreenState extends State<BookingScreen> {
         'total_amount': double.parse(_grandTotal.toStringAsFixed(2)),
         'accommodation_type': _accommodationId,
         'transport_type': _transportId,
+        'tour_type': _useCustomPlan ? 'Build Your Own' : (_pkg?.name ?? ''),
         'reference_code': ref,
         'status': 'pending',
       });
@@ -203,7 +204,7 @@ class _BookingScreenState extends State<BookingScreen> {
             'totalAmount': double.parse(_grandTotal.toStringAsFixed(2)),
             'tourType': _useCustomPlan ? 'Build Your Own' : (_pkg?.name ?? ''),
           },
-        );
+        ).ignore();
       }
       if (mounted) setState(() { _isProcessing = false; _bookingRef = ref; _bookingSuccess = true; });
     } catch (e) {

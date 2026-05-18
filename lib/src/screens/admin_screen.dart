@@ -518,6 +518,7 @@ class _BookingRow extends StatelessWidget {
     final id = booking['id'] as String;
     final accType = booking['accommodation_type'] as String? ?? '';
     final transType = booking['transport_type'] as String? ?? '';
+    final tourType = booking['tour_type'] as String? ?? '';
     final accLabel = _accLabels[accType] ?? (accType.isNotEmpty ? accType : '—');
     final transLabel = _transLabels[transType] ?? (transType.isNotEmpty ? transType : '—');
     final createdAt = (booking['created_at'] as String? ?? '').split('T').first;
@@ -580,6 +581,10 @@ class _BookingRow extends StatelessWidget {
             Expanded(
                 child: _InfoRow(
                     icon: Icons.directions_car, label: 'Transport', value: transLabel)),
+            if (tourType.isNotEmpty)
+              Expanded(
+                  child: _InfoRow(
+                      icon: Icons.tour, label: 'Tour Package', value: tourType)),
           ]),
           if (status == 'pending') ...[
             const SizedBox(height: 14),

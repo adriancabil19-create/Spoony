@@ -1,8 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { SmtpClient } from 'https://deno.land/x/smtp@v0.7.0/mod.ts'
 
-const GMAIL_USER = Deno.env.get('GMAIL_USER') ?? ''
-const GMAIL_APP_PASSWORD = Deno.env.get('GMAIL_APP_PASSWORD') ?? ''
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? ''
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -100,23 +98,25 @@ serve(async (req) => {
 </body>
 </html>`
 
-    const client = new SmtpClient()
-    await client.connectTLS({
-      hostname: 'smtp.gmail.com',
-      port: 465,
-      username: GMAIL_USER,
-      password: GMAIL_APP_PASSWORD,
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'Spoony Tours <onboarding@resend.dev>',
+        to: [email],
+        subject: `Booking Confirmed – ${reference} 🥄`,
+        html,
+      }),
     })
 
-    await client.send({
-      from: `Spoony Tours <${GMAIL_USER}>`,
-      to: email,
-      subject: `Booking Confirmed – ${reference} 🥄`,
-      content: 'Please view this email in an HTML-capable client.',
-      html,
-    })
+    const data = await res.json()
 
-    await client.close()
+    if (!res.ok) {
+      throw new Error(JSON.stringify(data))
+    }
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

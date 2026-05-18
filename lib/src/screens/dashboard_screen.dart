@@ -670,6 +670,7 @@ class _TripCard extends StatefulWidget {
   final String guests;
   final String accId;
   final String transId;
+  final String tourType;
   final String startDate;
   final String endDate;
   final int guestCount;
@@ -684,6 +685,7 @@ class _TripCard extends StatefulWidget {
     required this.guests,
     required this.accId,
     required this.transId,
+    required this.tourType,
     required this.startDate,
     required this.endDate,
     required this.guestCount,
@@ -712,6 +714,7 @@ class _TripCard extends StatefulWidget {
       guests:      '$guestCount Adult${guestCount != 1 ? 's' : ''}',
       accId:       b['accommodation_type'] as String? ?? '',
       transId:     b['transport_type']     as String? ?? '',
+      tourType:    b['tour_type']          as String? ?? '',
       startDate:   start,
       endDate:     end,
       guestCount:  guestCount,
@@ -849,7 +852,7 @@ class _TripCardState extends State<_TripCard> {
                   borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
                 ),
                 child: pw.Column(children: [
-                  detailRow('Tour Package',    widget.title),
+                  detailRow('Tour Package',    widget.tourType.isNotEmpty ? widget.tourType : widget.title),
                   detailRow('Check-in',        widget.startDate, alt: true),
                   detailRow('Check-out',        widget.endDate),
                   detailRow('Guests',           widget.guests, alt: true),
@@ -967,6 +970,18 @@ class _TripCardState extends State<_TripCard> {
               border: Border.all(color: const Color(0xFFBAE6FD)),
             ),
             child: Column(children: [
+              if (widget.tourType.isNotEmpty) ...[
+                Row(children: [
+                  const Icon(Icons.tour, size: 16, color: Color(0xFF7C3AED)),
+                  const SizedBox(width: 10),
+                  const Text('Tour Package',
+                      style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                  const Spacer(),
+                  Text(widget.tourType,
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                ]),
+                const SizedBox(height: 10),
+              ],
               Row(children: [
                 const Icon(Icons.hotel, size: 16, color: Color(0xFF0EA5E9)),
                 const SizedBox(width: 10),
