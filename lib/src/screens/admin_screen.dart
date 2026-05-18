@@ -234,6 +234,15 @@ class _BookingsTabState extends State<_BookingsTab> {
   List<Map<String, dynamic>> _bookings = [];
   String? _error;
   String _filter = 'all';
+  String _searchQuery = '';
+  DateTime? _filterDate;
+  final _searchCtrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -283,8 +292,29 @@ class _BookingsTabState extends State<_BookingsTab> {
   }
 
   List<Map<String, dynamic>> get _filtered {
-    if (_filter == 'all') return _bookings;
-    return _bookings.where((b) => (b['status'] as String? ?? '') == _filter).toList();
+    var list = _filter == 'all'
+        ? _bookings
+        : _bookings.where((b) => (b['status'] as String? ?? '') == _filter).toList();
+
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      list = list.where((b) {
+        final ref   = (b['reference_code'] as String? ?? '').toLowerCase();
+        final email = (b['user_email']     as String? ?? '').toLowerCase();
+        return ref.contains(q) || email.contains(q);
+      }).toList();
+    }
+
+    if (_filterDate != null) {
+      final d = _filterDate!;
+      final ds = '${d.year}-${d.month.toString().padLeft(2,'0')}-${d.day.toString().padLeft(2,'0')}';
+      list = list.where((b) {
+        final start = (b['start_date'] as String? ?? '').split('T').first;
+        return start == ds;
+      }).toList();
+    }
+
+    return list;
   }
 
   int _count(String status) => _bookings.where((b) => b['status'] == status).length;
@@ -307,27 +337,106 @@ class _BookingsTabState extends State<_BookingsTab> {
         const Text('Manage and approve guest bookings.',
             style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
         const SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _FilterChip(label: 'All', count: _bookings.length, color: const Color(0xFF006994),
-                selected: _filter == 'all', onTap: () => setState(() => _filter = 'all')),
-            _FilterChip(label: 'Pending', count: _count('pending'), color: const Color(0xFFFFC107),
-                selected: _filter == 'pending', onTap: () => setState(() => _filter = 'pending')),
-            _FilterChip(label: 'Confirmed', count: _count('confirmed'), color: const Color(0xFF50C878),
-                selected: _filter == 'confirmed', onTap: () => setState(() => _filter = 'confirmed')),
-            _FilterChip(label: 'Cancelled', count: _count('cancelled'), color: const Color(0xFFFF6B4A),
-                selected: _filter == 'cancelled', onTap: () => setState(() => _filter = 'cancelled')),
-          ],
+        // Search bar
+        TextField(
+          controller: _searchCtrl,
+          onChanged: (v) => setState(() => _searchQuery = v),
+          decoration: InputDecoration(
+            hintText: 'Search by reference no. or email…',
+            hintStyle: const TextStyle(color: Color(0xFFB0BEC5), fontSize: 13),
+            prefixIcon: const Icon(Icons.search, color: Color(0xFF00BCD4), size: 20),
+            suffixIcon: _searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.close, size: 18, color: Color(0xFF8B99A6)),
+                    onPressed: () { _searchCtrl.clear(); setState(() => _searchQuery = ''); },
+                  )
+                : null,
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE8EDEF))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE8EDEF))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF00BCD4), width: 1.5)),
+          ),
         ),
+        const SizedBox(height: 10),
+        // Date filter + status chips row
+        Row(children: [
+          // Date picker button
+          GestureDetector(
+            onTap: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _filterDate ?? DateTime.now(),
+                firstDate: DateTime(2024),
+                lastDate: DateTime(2030),
+              );
+              if (picked != null) setState(() => _filterDate = picked);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: _filterDate != null ? const Color(0xFFE0F7FA) : Colors.white,
+                border: Border.all(
+                  color: _filterDate != null ? const Color(0xFF00BCD4) : const Color(0xFFE8EDEF),
+                  width: _filterDate != null ? 1.5 : 1,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.calendar_today, size: 14,
+                    color: _filterDate != null ? const Color(0xFF006994) : const Color(0xFF8B99A6)),
+                const SizedBox(width: 6),
+                Text(
+                  _filterDate != null
+                      ? '${_filterDate!.year}-${_filterDate!.month.toString().padLeft(2,'0')}-${_filterDate!.day.toString().padLeft(2,'0')}'
+                      : 'Filter by date',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: _filterDate != null ? FontWeight.w700 : FontWeight.w500,
+                    color: _filterDate != null ? const Color(0xFF006994) : const Color(0xFF8B99A6),
+                  ),
+                ),
+                if (_filterDate != null) ...[
+                  const SizedBox(width: 6),
+                  GestureDetector(
+                    onTap: () => setState(() => _filterDate = null),
+                    child: const Icon(Icons.close, size: 14, color: Color(0xFF006994)),
+                  ),
+                ],
+              ]),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Status chips
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                _FilterChip(label: 'All', count: _bookings.length, color: const Color(0xFF006994),
+                    selected: _filter == 'all', onTap: () => setState(() => _filter = 'all')),
+                const SizedBox(width: 8),
+                _FilterChip(label: 'Pending', count: _count('pending'), color: const Color(0xFFFFC107),
+                    selected: _filter == 'pending', onTap: () => setState(() => _filter = 'pending')),
+                const SizedBox(width: 8),
+                _FilterChip(label: 'Confirmed', count: _count('confirmed'), color: const Color(0xFF50C878),
+                    selected: _filter == 'confirmed', onTap: () => setState(() => _filter = 'confirmed')),
+                const SizedBox(width: 8),
+                _FilterChip(label: 'Cancelled', count: _count('cancelled'), color: const Color(0xFFFF6B4A),
+                    selected: _filter == 'cancelled', onTap: () => setState(() => _filter = 'cancelled')),
+              ]),
+            ),
+          ),
+        ]),
         const SizedBox(height: 16),
         if (_loading)
           const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator()))
         else if (_error != null)
           _AdminEmpty(message: _error!)
         else if (_filtered.isEmpty)
-          _AdminEmpty(message: _filter == 'all' ? 'No bookings yet.' : 'No $_filter bookings.')
+          _AdminEmpty(message: _searchQuery.isNotEmpty || _filterDate != null
+              ? 'No bookings match your filters.'
+              : _filter == 'all' ? 'No bookings yet.' : 'No $_filter bookings.')
         else
           for (final b in _filtered) _BookingRow(booking: b, onApprove: _approve, onReject: _reject),
       ],

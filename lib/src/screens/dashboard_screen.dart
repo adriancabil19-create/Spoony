@@ -1,8 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../services/api_service.dart';
 import 'home_screen.dart';
 import 'auth_screen.dart';
+
+const _kAccLabels = {
+  'acc_budget': 'Budget Stay',
+  'acc_standard': 'Standard Hotel',
+  'acc_premium': 'Premium Resort',
+  'acc_luxury': 'Luxury Villa',
+};
+
+const _kTransLabels = {
+  'trans_shared_van': 'Shared Van',
+  'trans_private_sedan': 'Private Sedan',
+  'trans_suv': 'Private SUV',
+};
 
 class DashboardScreen extends StatefulWidget {
   static const routeName = '/dashboard';
@@ -603,9 +620,11 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
     if (confirmed != true || !mounted) return;
     try {
       await Supabase.instance.client.auth.updateUser(UserAttributes(password: newCtrl.text));
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Password updated successfully.')),
       );
+      }
     } on AuthException catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
@@ -641,75 +660,243 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
 
 // ── Trip Card ─────────────────────────────────────────────────────────────────
 
-class _TripCard extends StatelessWidget {
+class _TripCard extends StatefulWidget {
   final String status;
   final Color statusColor;
   final String ref;
   final String amount;
-  final String paymentLabel;
   final String title;
   final String dates;
   final String guests;
-  final String details;
+  final String accId;
+  final String transId;
+  final String startDate;
+  final String endDate;
+  final int guestCount;
 
   const _TripCard({
     required this.status,
     required this.statusColor,
     required this.ref,
     required this.amount,
-    required this.paymentLabel,
     required this.title,
     required this.dates,
     required this.guests,
-    required this.details,
+    required this.accId,
+    required this.transId,
+    required this.startDate,
+    required this.endDate,
+    required this.guestCount,
   });
 
   factory _TripCard.fromBooking(Map<String, dynamic> b) {
     final statusStr = (b['status'] as String? ?? 'pending').toLowerCase();
     final Color color;
     switch (statusStr) {
-      case 'confirmed':
-        color = const Color(0xFF50C878);
-        break;
-      case 'cancelled':
-        color = const Color(0xFFFF6B4A);
-        break;
-      default:
-        color = const Color(0xFFFFC107);
+      case 'confirmed': color = const Color(0xFF50C878); break;
+      case 'cancelled': color = const Color(0xFFFF6B4A); break;
+      default:          color = const Color(0xFFFFC107);
     }
-
-    final start = _fmtDate(b['start_date'] as String?);
-    final end = _fmtDate(b['end_date'] as String?);
-    final dates = (start.isNotEmpty && end.isNotEmpty) ? '$start - $end' : start;
-
-    final amount = b['total_amount'] != null
-        ? '₱${(b['total_amount'] as num).toStringAsFixed(0)}'
-        : '—';
-
     final guestCount = b['guest_count'] as int? ?? 1;
-    final accommodation = b['accommodation_type'] as String? ?? '';
-    final transport = b['transport_type'] as String? ?? '';
-    final details = [accommodation, transport].where((s) => s.isNotEmpty).join(' · ');
-
+    final startRaw = b['start_date'] as String? ?? '';
+    final endRaw   = b['end_date']   as String? ?? '';
+    final start = _fmtDate(startRaw);
+    final end   = _fmtDate(endRaw);
     return _TripCard(
-      status: statusStr.toUpperCase(),
+      status:      statusStr.toUpperCase(),
       statusColor: color,
-      ref: b['reference_code'] as String? ?? '—',
-      amount: amount,
-      paymentLabel: 'Total',
-      title: 'Cebu Tour Package',
-      dates: dates,
-      guests: '$guestCount Adult${guestCount != 1 ? 's' : ''}',
-      details: details.isNotEmpty ? details : 'Cebu, Philippines',
+      ref:         b['reference_code'] as String? ?? '—',
+      amount:      b['total_amount'] != null ? '₱${(b['total_amount'] as num).toStringAsFixed(0)}' : '—',
+      title:       'Cebu Tour Package',
+      dates:       (start.isNotEmpty && end.isNotEmpty) ? '$start – $end' : start,
+      guests:      '$guestCount Adult${guestCount != 1 ? 's' : ''}',
+      accId:       b['accommodation_type'] as String? ?? '',
+      transId:     b['transport_type']     as String? ?? '',
+      startDate:   start,
+      endDate:     end,
+      guestCount:  guestCount,
     );
   }
 
   static String _fmtDate(String? iso) {
-    if (iso == null) return '';
+    if (iso == null || iso.isEmpty) return '';
     final d = DateTime.tryParse(iso);
     if (d == null) return '';
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return '${months[d.month - 1]} ${d.day}, ${d.year}';
+    const m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${m[d.month - 1]} ${d.day}, ${d.year}';
+  }
+
+  @override
+  State<_TripCard> createState() => _TripCardState();
+}
+
+class _TripCardState extends State<_TripCard> {
+  bool _expanded = false;
+
+  String get _accLabel => _kAccLabels[widget.accId] ?? (widget.accId.isNotEmpty ? widget.accId : '—');
+  String get _transLabel => _kTransLabels[widget.transId] ?? (widget.transId.isNotEmpty ? widget.transId : '—');
+  bool get _isPending => widget.status == 'PENDING';
+
+  void _showQR() {
+    showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        clipBehavior: Clip.antiAlias,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 340),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(colors: [Color(0xFF006994), Color(0xFF00BCD4)]),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Text('Booking Ticket', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
+                Text(widget.ref, style: const TextStyle(fontSize: 13, color: Colors.white70)),
+              ]),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(children: [
+                QrImageView(data: widget.ref, size: 200, backgroundColor: Colors.white),
+                const SizedBox(height: 16),
+                Text(widget.ref,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF006994), letterSpacing: 2)),
+                const SizedBox(height: 8),
+                const Text('Show this QR code at the tour meeting point for check-in.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12, color: Color(0xFF8B99A6), height: 1.5)),
+              ]),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _downloadPdf() async {
+    final doc = pw.Document();
+    final ocean = PdfColor.fromHex('#0EA5E9');
+    final teal  = PdfColor.fromHex('#14B8A6');
+    final dark  = PdfColor.fromHex('#0F172A');
+    final mid   = PdfColor.fromHex('#64748B');
+    final lightBg = PdfColor.fromHex('#F0F9FF');
+    final border  = PdfColor.fromHex('#E2E8F0');
+    final rowAlt  = PdfColor.fromHex('#F8FAFC');
+
+    pw.Widget detailRow(String label, String value, {bool alt = false, PdfColor? valueColor}) =>
+      pw.Container(
+        color: alt ? rowAlt : PdfColors.white,
+        padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+        child: pw.Row(children: [
+          pw.SizedBox(width: 160,
+            child: pw.Text(label, style: pw.TextStyle(fontSize: 11, color: mid))),
+          pw.Expanded(child: pw.Text(value,
+              style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: valueColor ?? dark))),
+        ]),
+      );
+
+    doc.addPage(pw.Page(
+      pageFormat: PdfPageFormat.a4,
+      margin: pw.EdgeInsets.zero,
+      build: (ctx) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          // Header
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
+            color: ocean,
+            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+              pw.Text('🥄 Spoony Travel',
+                  style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+              pw.SizedBox(height: 4),
+              pw.Text('BOOKING ITINERARY',
+                  style: pw.TextStyle(fontSize: 12, color: const PdfColor(1, 1, 1, 0.75), letterSpacing: 2)),
+            ]),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(48),
+            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+              // Reference badge
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                decoration: pw.BoxDecoration(
+                  color: lightBg,
+                  border: pw.Border.all(color: PdfColor.fromHex('#BAE6FD')),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+                ),
+                child: pw.Column(children: [
+                  pw.Text('BOOKING REFERENCE',
+                      style: pw.TextStyle(fontSize: 10, color: ocean, fontWeight: pw.FontWeight.bold, letterSpacing: 1)),
+                  pw.SizedBox(height: 8),
+                  pw.Text(widget.ref,
+                      style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold, color: dark, letterSpacing: 3)),
+                ]),
+              ),
+              pw.SizedBox(height: 32),
+
+              // Details table
+              pw.Text('BOOKING DETAILS',
+                  style: pw.TextStyle(fontSize: 10, color: mid, fontWeight: pw.FontWeight.bold, letterSpacing: 1)),
+              pw.SizedBox(height: 12),
+              pw.Container(
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: border),
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                ),
+                child: pw.Column(children: [
+                  detailRow('Tour Package',    widget.title),
+                  detailRow('Check-in',        widget.startDate, alt: true),
+                  detailRow('Check-out',        widget.endDate),
+                  detailRow('Guests',           widget.guests, alt: true),
+                  detailRow('Accommodation',    _accLabel),
+                  detailRow('Transport',        _transLabel, alt: true),
+                  detailRow('Total Amount',     widget.amount, valueColor: teal),
+                ]),
+              ),
+              pw.SizedBox(height: 28),
+
+              // Info note
+              pw.Container(
+                padding: const pw.EdgeInsets.all(20),
+                decoration: pw.BoxDecoration(
+                  color: lightBg,
+                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                ),
+                child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                  pw.Text('Important Information',
+                      style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: dark)),
+                  pw.SizedBox(height: 8),
+                  pw.Text(
+                    'Please bring this itinerary on the day of your tour. '
+                    'Our team will contact you to confirm pickup details and meeting point.',
+                    style: pw.TextStyle(fontSize: 11, color: mid, lineSpacing: 3),
+                  ),
+                ]),
+              ),
+              pw.Spacer(),
+
+              // Footer
+              pw.Divider(color: border),
+              pw.SizedBox(height: 10),
+              pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+                pw.Text('Spoony Tours · Cebu, Philippines',
+                    style: pw.TextStyle(fontSize: 10, color: mid)),
+                pw.Text('spoonytraveltours@gmail.com',
+                    style: pw.TextStyle(fontSize: 10, color: ocean)),
+              ]),
+            ]),
+          ),
+        ],
+      ),
+    ));
+
+    final bytes = await doc.save();
+    await Printing.sharePdf(bytes: bytes, filename: 'Spoony_Itinerary_${widget.ref}.pdf');
   }
 
   @override
@@ -721,41 +908,97 @@ class _TripCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFE8EDEF)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(status,
-                  style: TextStyle(color: statusColor, fontWeight: FontWeight.w700, fontSize: 11)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Status row
+        Row(children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: widget.statusColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
             ),
-            const SizedBox(width: 12),
-            Text(ref, style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
-            const Spacer(),
-            Text(amount,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF50C878))),
-            const SizedBox(width: 8),
-            Text(paymentLabel, style: const TextStyle(fontSize: 11, color: Color(0xFF8B99A6))),
+            child: Text(widget.status,
+                style: TextStyle(color: widget.statusColor, fontWeight: FontWeight.w700, fontSize: 11)),
+          ),
+          const SizedBox(width: 12),
+          Text(widget.ref,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
+          const Spacer(),
+          Text(widget.amount,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF50C878))),
+          const SizedBox(width: 6),
+          const Text('Total', style: TextStyle(fontSize: 11, color: Color(0xFF8B99A6))),
+        ]),
+        const SizedBox(height: 16),
+        Text(widget.title,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+        const SizedBox(height: 16),
+        Row(children: [
+          _TripDetail(icon: Icons.calendar_today, label: 'Dates',  value: widget.dates),
+          _TripDetail(icon: Icons.people,         label: 'Guests', value: widget.guests),
+          _TripDetail(icon: Icons.location_on,    label: 'Region', value: 'Cebu, Philippines'),
+        ]),
+
+        // Expand toggle
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Row(children: [
+            const Text('Booking Details',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF006994))),
+            const SizedBox(width: 4),
+            AnimatedRotation(
+              turns: _expanded ? 0.5 : 0,
+              duration: const Duration(milliseconds: 200),
+              child: const Icon(Icons.keyboard_arrow_down, size: 18, color: Color(0xFF006994)),
+            ),
           ]),
-          const SizedBox(height: 20),
-          Text(title,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
-          const SizedBox(height: 16),
-          Row(children: [
-            _TripDetail(icon: Icons.calendar_today, label: 'Dates', value: dates),
-            _TripDetail(icon: Icons.people, label: 'Guests', value: guests),
-            _TripDetail(icon: Icons.location_on, label: 'Details', value: details),
-          ]),
-          const SizedBox(height: 20),
-          Row(children: [
+        ),
+
+        // Expanded details
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Container(
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0F9FF),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFBAE6FD)),
+            ),
+            child: Column(children: [
+              Row(children: [
+                const Icon(Icons.hotel, size: 16, color: Color(0xFF0EA5E9)),
+                const SizedBox(width: 10),
+                const Text('Accommodation',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                const Spacer(),
+                Text(_accLabel,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+              ]),
+              const SizedBox(height: 10),
+              Row(children: [
+                const Icon(Icons.directions_car, size: 16, color: Color(0xFF14B8A6)),
+                const SizedBox(width: 10),
+                const Text('Transport',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                const Spacer(),
+                Text(_transLabel,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+              ]),
+            ]),
+          ),
+          crossFadeState: _expanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 220),
+        ),
+
+        // Action buttons
+        const SizedBox(height: 20),
+        Row(children: [
+          if (!_isPending) ...[
             Expanded(
               child: FilledButton.icon(
-                onPressed: () {},
+                onPressed: _showQR,
                 icon: const Icon(Icons.qr_code_2, size: 18),
                 label: const Text('View Tickets (QR)'),
                 style: FilledButton.styleFrom(
@@ -766,22 +1009,22 @@ class _TripCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.download, size: 18),
-                label: const Text('Download Itinerary'),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF006994)),
-                  foregroundColor: const Color(0xFF006994),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
+          ],
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: _downloadPdf,
+              icon: const Icon(Icons.download, size: 18),
+              label: const Text('Download Itinerary'),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF006994)),
+                foregroundColor: const Color(0xFF006994),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
               ),
             ),
-          ]),
-        ],
-      ),
+          ),
+        ]),
+      ]),
     );
   }
 }
