@@ -1,6 +1,8 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import nodemailer from 'npm:nodemailer'
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')!
+const GMAIL_USER = Deno.env.get('GMAIL_USER')!
+const GMAIL_APP_PASSWORD = Deno.env.get('GMAIL_APP_PASSWORD')!
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,10 +27,10 @@ serve(async (req) => {
       tourType,
     } = await req.json()
 
-    const formattedTotal = new Intl.NumberFormat('en-PH', {
-      style: 'currency',
-      currency: 'PHP',
-    }).format(totalAmount)
+    const formattedTotal = '₱' + Number(totalAmount).toLocaleString('en-PH', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
 
     const html = `
 <!DOCTYPE html>
@@ -137,24 +139,25 @@ serve(async (req) => {
 </body>
 </html>`
 
-    const res = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${RESEND_API_KEY}`,
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: GMAIL_USER,
+        pass: GMAIL_APP_PASSWORD,
       },
-      body: JSON.stringify({
-        from: 'Spoony Tours <bookings@resend.dev>',
-        to: email,
-        subject: `Booking Confirmed – ${reference} 🥄`,
-        html,
-      }),
     })
 
-    const data = await res.json()
-    return new Response(JSON.stringify(data), {
+    await transporter.sendMail({
+      from: `Spoony Tours <${GMAIL_USER}>`,
+      to: email,
+      subject: `Booking Confirmed – ${reference} 🥄`,
+      html,
+    })
+
+    return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: res.ok ? 200 : 400,
     })
   } catch (err) {
     return new Response(JSON.stringify({ error: String(err) }), {
