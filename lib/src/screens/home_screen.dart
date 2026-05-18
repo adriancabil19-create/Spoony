@@ -999,15 +999,31 @@ class SpoonyNavBar extends StatefulWidget {
 
 class _SpoonyNavBarState extends State<SpoonyNavBar> {
   User? _user;
+  bool _isDriver = false;
   late final StreamSubscription<AuthState> _sub;
 
   @override
   void initState() {
     super.initState();
     _user = Supabase.instance.client.auth.currentUser;
+    if (_user != null) _checkDriver(_user!);
     _sub = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (mounted) setState(() => _user = data.session?.user);
+      if (mounted) {
+        setState(() { _user = data.session?.user; _isDriver = false; });
+        if (data.session?.user != null) _checkDriver(data.session!.user);
+      }
     });
+  }
+
+  Future<void> _checkDriver(User user) async {
+    try {
+      final row = await Supabase.instance.client
+          .from('drivers')
+          .select('id')
+          .eq('email', user.email ?? '')
+          .maybeSingle();
+      if (mounted) setState(() => _isDriver = row != null);
+    } catch (_) {}
   }
 
   @override
@@ -1078,6 +1094,10 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
                 _MobileNavItem(label: 'Admin Panel', icon: Icons.admin_panel_settings_outlined,
                     active: widget.current == 'admin',
                     onTap: () { Navigator.pop(context); Navigator.pushReplacementNamed(context, AdminScreen.routeName); }),
+              if (_isDriver && !_isAdmin)
+                _MobileNavItem(label: 'Driver Portal', icon: Icons.drive_eta_outlined,
+                    active: widget.current == 'driver',
+                    onTap: () { Navigator.pop(context); Navigator.pushReplacementNamed(context, '/driver'); }),
               const SizedBox(height: 8),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1169,6 +1189,9 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
               if (_isAdmin)
                 _NavBtn(label: 'Admin', active: widget.current == 'admin',
                     onTap: () => Navigator.pushReplacementNamed(context, AdminScreen.routeName)),
+              if (_isDriver && !_isAdmin)
+                _NavBtn(label: 'Driver', active: widget.current == 'driver',
+                    onTap: () => Navigator.pushReplacementNamed(context, '/driver')),
               const SizedBox(width: 20),
               if (_user != null) ...[
                 CircleAvatar(
