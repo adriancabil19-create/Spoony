@@ -85,16 +85,29 @@ class _DriverScreenState extends State<DriverScreen> {
     }
   }
 
-  Future<void> _complete(String bookingId) async {
+  Future<void> _complete(String bookingId, Map<String, dynamic> booking) async {
     try {
       await Supabase.instance.client
           .from('bookings')
           .update({'status': 'completed'})
           .eq('id', bookingId);
+
+      // Notify the guest by email
+      try {
+        await Supabase.instance.client.functions.invoke('notify-guest-complete', body: {
+          'guestEmail':  booking['user_email']  ?? '',
+          'reference':   booking['reference_code'] ?? '',
+          'tourType':    booking['tour_type']   ?? '',
+          'startDate':   (booking['start_date'] as String? ?? '').split('T').first,
+          'endDate':     (booking['end_date']   as String? ?? '').split('T').first,
+          'guestCount':  booking['guest_count'] ?? 0,
+        });
+      } catch (_) {}
+
       await _loadTrips();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Trip marked as completed.')),
+          const SnackBar(content: Text('Trip marked as completed. Guest notified.')),
         );
       }
     } catch (e) {
@@ -440,7 +453,7 @@ class _DriverScreenState extends State<DriverScreen> {
 class _TripCard extends StatefulWidget {
   final Map<String, dynamic> booking;
   final Future<void> Function(String) onCheckIn;
-  final Future<void> Function(String) onComplete;
+  final Future<void> Function(String, Map<String, dynamic>) onComplete;
 
   const _TripCard({required this.booking, required this.onCheckIn, required this.onComplete});
 
@@ -562,7 +575,7 @@ class _TripCardState extends State<_TripCard> {
               SizedBox(
                 width: double.infinity,
                 child: FilledButton.icon(
-                  onPressed: () => widget.onComplete(id),
+                  onPressed: () => widget.onComplete(id, widget.booking),
                   icon: const Icon(Icons.task_alt, size: 16),
                   label: const Text('Mark Trip as Completed', style: TextStyle(fontWeight: FontWeight.w700)),
                   style: FilledButton.styleFrom(
