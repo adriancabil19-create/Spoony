@@ -167,8 +167,10 @@ class _BookingScreenState extends State<BookingScreen> {
     setState(() => _isProcessing = true);
     try {
       final ref = _generateRef();
+      final email = user.email ?? '';
       await Supabase.instance.client.from('bookings').insert({
         'user_id': user.id,
+        'user_email': email,
         'guest_count': _guestCount,
         'start_date': _startDate!.toIso8601String().substring(0, 10),
         'end_date': _endDate!.toIso8601String().substring(0, 10),
@@ -178,6 +180,31 @@ class _BookingScreenState extends State<BookingScreen> {
         'reference_code': ref,
         'status': 'pending',
       });
+      // Send receipt email via Edge Function (non-blocking)
+      if (email.isNotEmpty) {
+        final acc = _accommodations.firstWhere(
+          (a) => a.id == _accommodationId,
+          orElse: () => _accommodations.first,
+        );
+        final trans = _transports.firstWhere(
+          (t) => t.id == _transportId,
+          orElse: () => _transports.first,
+        );
+        Supabase.instance.client.functions.invoke(
+          'send-booking-receipt',
+          body: {
+            'email': email,
+            'reference': ref,
+            'guestCount': _guestCount,
+            'startDate': _startDate!.toIso8601String().substring(0, 10),
+            'endDate': _endDate!.toIso8601String().substring(0, 10),
+            'accommodation': acc.title,
+            'transport': trans.title,
+            'totalAmount': double.parse(_grandTotal.toStringAsFixed(2)),
+            'tourType': _useCustomPlan ? 'Build Your Own' : (_pkg?.name ?? ''),
+          },
+        );
+      }
       if (mounted) setState(() { _isProcessing = false; _bookingRef = ref; _bookingSuccess = true; });
     } catch (e) {
       if (mounted) {
