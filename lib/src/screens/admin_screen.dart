@@ -325,7 +325,8 @@ class _BookingsTabState extends State<_BookingsTab> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return SingleChildScrollView(
+      child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
@@ -455,6 +456,7 @@ class _BookingsTabState extends State<_BookingsTab> {
             ),
           ),
       ],
+      ),
     );
   }
 }
@@ -534,10 +536,31 @@ class _BookingRowState extends State<_BookingRow> {
           .from('bookings')
           .update({'driver_id': driverId})
           .eq('id', bookingId);
+
+      if (driverId != null) {
+        final driver = widget.drivers.where((d) => d['id'] == driverId).firstOrNull;
+        if (driver != null) {
+          final b = widget.booking;
+          try {
+            await Supabase.instance.client.functions.invoke('notify-driver', body: {
+              'driverEmail': driver['email'],
+              'driverName': driver['full_name'],
+              'reference': b['reference_code'],
+              'guestEmail': b['user_email'] ?? '',
+              'startDate': (b['start_date'] as String? ?? '').split('T').first,
+              'endDate': (b['end_date'] as String? ?? '').split('T').first,
+              'itinerary': b['itinerary'] ?? '',
+              'tourType': b['tour_type'] ?? '',
+              'guestCount': b['guest_count'] ?? 0,
+            });
+          } catch (_) {}
+        }
+      }
+
       await widget.onRefresh();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(driverId == null ? 'Driver unassigned.' : 'Driver assigned.')),
+          SnackBar(content: Text(driverId == null ? 'Driver unassigned.' : 'Driver assigned. Notification sent.')),
         );
       }
     } catch (e) {
@@ -553,9 +576,10 @@ class _BookingRowState extends State<_BookingRow> {
     final status = (booking['status'] as String? ?? 'pending').toLowerCase();
     final Color statusColor;
     switch (status) {
-      case 'confirmed': statusColor = const Color(0xFF50C878); break;
-      case 'cancelled': statusColor = const Color(0xFFFF6B4A); break;
-      default: statusColor = const Color(0xFFFFC107);
+      case 'confirmed':  statusColor = const Color(0xFF50C878); break;
+      case 'completed':  statusColor = const Color(0xFF0EA5E9); break;
+      case 'cancelled':  statusColor = const Color(0xFFFF6B4A); break;
+      default:           statusColor = const Color(0xFFFFC107);
     }
 
     final ref        = booking['reference_code'] as String? ?? '—';
@@ -2319,6 +2343,7 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
   final _emailCtrl   = TextEditingController();
   final _phoneCtrl   = TextEditingController();
   final _plateCtrl   = TextEditingController();
+  final _photoCtrl   = TextEditingController();
   String _vehicleType = 'Van';
   bool _saving = false;
 
@@ -2336,6 +2361,7 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
     _plateCtrl.dispose();
+    _photoCtrl.dispose();
     super.dispose();
   }
 
@@ -2372,12 +2398,14 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
         'phone': _phoneCtrl.text.trim(),
         'vehicle_type': _vehicleType,
         'license_plate': _plateCtrl.text.trim(),
+        'photo_url': _photoCtrl.text.trim(),
         'is_available': true,
       });
       _nameCtrl.clear();
       _emailCtrl.clear();
       _phoneCtrl.clear();
       _plateCtrl.clear();
+      _photoCtrl.clear();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Driver added successfully.')),
@@ -2389,6 +2417,112 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<void> _editDriver(Map<String, dynamic> d) async {
+    final nameCtrl  = TextEditingController(text: d['full_name']     as String? ?? '');
+    final emailCtrl = TextEditingController(text: d['email']         as String? ?? '');
+    final phoneCtrl = TextEditingController(text: d['phone']         as String? ?? '');
+    final plateCtrl = TextEditingController(text: d['license_plate'] as String? ?? '');
+    final photoCtrl = TextEditingController(text: d['photo_url']     as String? ?? '');
+    String vehicle = d['vehicle_type'] as String? ?? 'Van';
+    bool avail = d['is_available'] as bool? ?? true;
+    bool saving = false;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlg) => AlertDialog(
+          title: const Text('Edit Driver', style: TextStyle(fontWeight: FontWeight.w700)),
+          contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+          content: SizedBox(
+            width: 480,
+            child: SingleChildScrollView(
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Row(children: [
+                  Expanded(child: _DlgField(label: 'Full Name *', hint: 'Juan dela Cruz', controller: nameCtrl)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _DlgField(label: 'Email *', hint: 'driver@email.com', controller: emailCtrl)),
+                ]),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(child: _DlgField(label: 'Phone', hint: '+63 912 345 6789', controller: phoneCtrl)),
+                  const SizedBox(width: 12),
+                  Expanded(child: _DlgField(label: 'License Plate', hint: 'ABC 1234', controller: plateCtrl)),
+                ]),
+                const SizedBox(height: 12),
+                _DlgField(label: 'Photo URL', hint: 'https://i.imgur.com/photo.jpg', controller: photoCtrl),
+                const SizedBox(height: 12),
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('Vehicle Type', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF64748B))),
+                  const SizedBox(height: 6),
+                  DropdownButtonFormField<String>(
+                    initialValue: vehicle,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                    ),
+                    items: _vehicleTypes.map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(),
+                    onChanged: (v) => setDlg(() => vehicle = v ?? 'Van'),
+                  ),
+                ]),
+                const SizedBox(height: 8),
+                SwitchListTile(
+                  title: const Text('Available', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  value: avail,
+                  activeThumbColor: const Color(0xFF0EA5E9),
+                  contentPadding: EdgeInsets.zero,
+                  onChanged: (v) => setDlg(() => avail = v),
+                ),
+              ]),
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+            FilledButton(
+              onPressed: saving ? null : () async {
+                final name  = nameCtrl.text.trim();
+                final email = emailCtrl.text.trim();
+                if (name.isEmpty || email.isEmpty) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(content: Text('Name and email are required.')),
+                  );
+                  return;
+                }
+                setDlg(() => saving = true);
+                try {
+                  await Supabase.instance.client.from('drivers').update({
+                    'full_name':     name,
+                    'email':         email,
+                    'phone':         phoneCtrl.text.trim(),
+                    'license_plate': plateCtrl.text.trim(),
+                    'photo_url':     photoCtrl.text.trim(),
+                    'vehicle_type':  vehicle,
+                    'is_available':  avail,
+                  }).eq('id', d['id'] as String);
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  await _load();
+                } catch (e) {
+                  if (ctx.mounted) ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(content: Text('Error: $e')));
+                } finally {
+                  setDlg(() => saving = false);
+                }
+              },
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFF0EA5E9)),
+              child: saving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      ),
+    );
+    nameCtrl.dispose(); emailCtrl.dispose();
+    phoneCtrl.dispose(); plateCtrl.dispose(); photoCtrl.dispose();
   }
 
   Future<void> _deleteDriver(String id) async {
@@ -2449,6 +2583,8 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
             const SizedBox(width: 12),
             Expanded(child: _DlgField(label: 'License Plate', hint: 'ABC 1234', controller: _plateCtrl)),
           ]),
+          const SizedBox(height: 12),
+          _DlgField(label: 'Photo URL', hint: 'https://i.imgur.com/photo.jpg', controller: _photoCtrl),
           const SizedBox(height: 12),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('Vehicle Type',
@@ -2514,6 +2650,7 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
             final vehicle  = d['vehicle_type']  as String? ?? 'Van';
             final plate    = d['license_plate'] as String? ?? '—';
             final avail    = d['is_available']  as bool?   ?? true;
+            final photoUrl = d['photo_url']     as String? ?? '';
             final id       = d['id']            as String;
             return Container(
               margin: const EdgeInsets.only(bottom: 10),
@@ -2524,14 +2661,21 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                 border: Border.all(color: const Color(0xFFE8EDEF)),
               ),
               child: Row(children: [
-                Container(
-                  width: 44, height: 44,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0F7FA),
-                    borderRadius: BorderRadius.circular(22),
-                  ),
-                  child: const Icon(Icons.drive_eta, color: Color(0xFF006994), size: 22),
-                ),
+                photoUrl.isNotEmpty
+                    ? CircleAvatar(
+                        radius: 22,
+                        backgroundImage: NetworkImage(photoUrl),
+                        onBackgroundImageError: (_, _) {},
+                        backgroundColor: const Color(0xFFE0F7FA),
+                      )
+                    : Container(
+                        width: 44, height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0F7FA),
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        child: const Icon(Icons.drive_eta, color: Color(0xFF006994), size: 22),
+                      ),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -2557,7 +2701,12 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                     ),
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 4),
+                IconButton(
+                  onPressed: () => _editDriver(d),
+                  icon: const Icon(Icons.edit_outlined, color: Color(0xFF0EA5E9), size: 20),
+                  tooltip: 'Edit driver',
+                ),
                 IconButton(
                   onPressed: () => _deleteDriver(id),
                   icon: const Icon(Icons.delete_outline, color: Color(0xFFFF6B4A), size: 20),

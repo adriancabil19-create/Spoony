@@ -85,6 +85,27 @@ class _DriverScreenState extends State<DriverScreen> {
     }
   }
 
+  Future<void> _complete(String bookingId) async {
+    try {
+      await Supabase.instance.client
+          .from('bookings')
+          .update({'status': 'completed'})
+          .eq('id', bookingId);
+      await _loadTrips();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Trip marked as completed.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _checkIn(String bookingId) async {
     try {
       await Supabase.instance.client
@@ -212,26 +233,11 @@ class _DriverScreenState extends State<DriverScreen> {
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       // ── Header ─────────────────────────────────────────────────────────────
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Welcome, $driverName',
-              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _kDark)),
-          Text('$vehicle · $plate',
-              style: const TextStyle(fontSize: 14, color: _kMid)),
-        ]),
-        OutlinedButton.icon(
-          onPressed: () async {
-            await Supabase.instance.client.auth.signOut();
-            if (mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
-          },
-          icon: const Icon(Icons.logout, size: 16),
-          label: const Text('Sign Out'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFFF6B4A),
-            side: const BorderSide(color: Color(0xFFFF6B4A)),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-        ),
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('Welcome, $driverName',
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _kDark)),
+        Text('$vehicle · $plate',
+            style: const TextStyle(fontSize: 14, color: _kMid)),
       ]),
       const SizedBox(height: 32),
 
@@ -343,7 +349,9 @@ class _DriverScreenState extends State<DriverScreen> {
           const SizedBox(width: 8),
           _statusChip('Ongoing',   'pending',   const Color(0xFFFFC107),   _countByStatus('pending')),
           const SizedBox(width: 8),
-          _statusChip('Complete',  'confirmed', const Color(0xFF50C878),   _countByStatus('confirmed')),
+          _statusChip('Active',    'confirmed', const Color(0xFF50C878),   _countByStatus('confirmed')),
+          const SizedBox(width: 8),
+          _statusChip('Completed', 'completed', _kTeal,                    _countByStatus('completed')),
           const SizedBox(width: 8),
           _statusChip('Cancelled', 'cancelled', const Color(0xFFFF6B4A),   _countByStatus('cancelled')),
         ]),
@@ -379,7 +387,11 @@ class _DriverScreenState extends State<DriverScreen> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: _filtered.length,
-          itemBuilder: (_, i) => _TripCard(booking: _filtered[i], onCheckIn: _checkIn),
+          itemBuilder: (_, i) => _TripCard(
+            booking: _filtered[i],
+            onCheckIn: _checkIn,
+            onComplete: _complete,
+          ),
         ),
     ]);
   }
@@ -428,8 +440,9 @@ class _DriverScreenState extends State<DriverScreen> {
 class _TripCard extends StatefulWidget {
   final Map<String, dynamic> booking;
   final Future<void> Function(String) onCheckIn;
+  final Future<void> Function(String) onComplete;
 
-  const _TripCard({required this.booking, required this.onCheckIn});
+  const _TripCard({required this.booking, required this.onCheckIn, required this.onComplete});
 
   @override
   State<_TripCard> createState() => _TripCardState();
@@ -475,7 +488,9 @@ class _TripCardState extends State<_TripCard> {
     final String statusLabel;
     switch (status) {
       case 'confirmed':
-        statusColor = const Color(0xFF50C878); statusLabel = 'COMPLETE';
+        statusColor = const Color(0xFF50C878); statusLabel = 'ACTIVE';
+      case 'completed':
+        statusColor = _kTeal; statusLabel = 'COMPLETED';
       case 'cancelled':
         statusColor = const Color(0xFFFF6B4A); statusLabel = 'CANCELLED';
       default:
@@ -533,9 +548,25 @@ class _TripCardState extends State<_TripCard> {
                 child: FilledButton.icon(
                   onPressed: () => widget.onCheckIn(id),
                   icon: const Icon(Icons.check_circle_outline, size: 16),
-                  label: const Text('Mark as Confirmed', style: TextStyle(fontWeight: FontWeight.w700)),
+                  label: const Text('Check In Guest', style: TextStyle(fontWeight: FontWeight.w700)),
                   style: FilledButton.styleFrom(
                     backgroundColor: _kTeal,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+              ),
+            ],
+            if (status == 'confirmed') ...[
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () => widget.onComplete(id),
+                  icon: const Icon(Icons.task_alt, size: 16),
+                  label: const Text('Mark Trip as Completed', style: TextStyle(fontWeight: FontWeight.w700)),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _kOcean,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
