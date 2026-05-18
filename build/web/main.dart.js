@@ -103477,7 +103477,7 @@ return A.A($async$we,r)},
 agh(){var s,r=J.D4(5,t.N)
 for(s=0;s<5;++s)r[s]="ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[B.qs.NI(36)]
 return"CEB-"+B.b.lF(r)},
-A9(){var s=0,r=A.B(t.H),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f,e
+A9(){var s=0,r=A.B(t.H),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f
 var $async$A9=A.C(function(a,b){if(a===1){o.push(b)
 s=p}for(;;)switch(s){case 0:if(n.z==null||n.Q==null){s=1
 break}if(!n.CW&&n.gw9()==null){s=1
@@ -103491,19 +103491,15 @@ s=1
 break}n.J(new A.avc(n))
 p=4
 l=n.agh()
-i=i.b.em("bookings")
-h=m.a
-g=m.z
-if(g==null)g=""
 s=7
-return A.u(i.ji(0,A.ab(["user_id",h,"user_email",g,"guest_count",n.y,"start_date",B.c.a8(n.z.uu(),0,10),"end_date",B.c.a8(n.Q.uu(),0,10),"total_amount",A.aXi(B.d.a7(n.gAG(),2)),"accommodation_type",n.r,"transport_type",n.w,"reference_code",l,"status","pending"],t.N,t.K)),$async$A9)
+return A.u(i.b.em("bookings").ji(0,A.ab(["user_id",m.a,"guest_count",n.y,"start_date",B.c.a8(n.z.uu(),0,10),"end_date",B.c.a8(n.Q.uu(),0,10),"total_amount",A.aXi(B.d.a7(n.gAG(),2)),"accommodation_type",n.r,"transport_type",n.w,"reference_code",l,"status","pending"],t.N,t.K)),$async$A9)
 case 7:if(n.c!=null)n.J(new A.avd(n,l))
 p=2
 s=6
 break
 case 4:p=3
-e=o.pop()
-k=A.ac(e)
+f=o.pop()
+k=A.ac(f)
 if(n.c!=null){n.J(new A.ave(n))
 i=J.cW(k)
 i=A.fQ(i,"PostgrestException(","")

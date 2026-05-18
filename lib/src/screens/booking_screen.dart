@@ -169,7 +169,6 @@ class _BookingScreenState extends State<BookingScreen> {
       final ref = _generateRef();
       await Supabase.instance.client.from('bookings').insert({
         'user_id': user.id,
-        'user_email': user.email ?? '',
         'guest_count': _guestCount,
         'start_date': _startDate!.toIso8601String().substring(0, 10),
         'end_date': _endDate!.toIso8601String().substring(0, 10),
