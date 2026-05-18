@@ -1,9 +1,9 @@
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:printing/printing.dart';
 import '../services/api_service.dart';
 import 'home_screen.dart';
 import 'auth_screen.dart';
@@ -892,7 +892,12 @@ class _TripCardState extends State<_TripCard> {
       ));
 
       final bytes = await doc.save();
-      await Printing.sharePdf(bytes: bytes, filename: 'Spoony_Itinerary_${widget.ref}.pdf');
+      final blob = html.Blob([bytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      html.AnchorElement(href: url)
+        ..setAttribute('download', 'Spoony_Itinerary_${widget.ref}.pdf')
+        ..click();
+      html.Url.revokeObjectUrl(url);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
