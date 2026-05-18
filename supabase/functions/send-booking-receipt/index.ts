@@ -1,7 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY') ?? ''
-const SENDER_EMAIL = Deno.env.get('SENDER_EMAIL') ?? 'spoonytraveltours@gmail.com'
+const SENDGRID_API_KEY = Deno.env.get('SENDGRID_API_KEY') ?? ''
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -99,25 +98,30 @@ serve(async (req) => {
 </body>
 </html>`
 
-    await fetch('https://api.brevo.com/v3/smtp/email', {
+    const sgRes = await fetch('https://api.sendgrid.com/v3/mail/send', {
       method: 'POST',
       headers: {
-        'api-key': BREVO_API_KEY,
+        'Authorization': `Bearer ${SENDGRID_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        sender: { name: 'Spoony Tours', email: SENDER_EMAIL },
-        to: [{ email }],
+        personalizations: [{
+          to: [{ email }],
+          cc: [{ email: 'spoonytraveltours@gmail.com' }],
+        }],
+        from: { email: 'spoonytraveltours@gmail.com', name: 'Spoony Travel and Tours' },
         subject: `Booking Confirmed – ${reference} 🥄`,
-        htmlContent,
+        content: [{ type: 'text/html', value: htmlContent }],
       }),
     })
 
-    return new Response(JSON.stringify({ success: true }), {
+    console.log('SendGrid status:', sgRes.status)
+
+    return new Response(JSON.stringify({ success: true, status: sgRes.status }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
   } catch (err) {
-    // Always return 200 — email is non-critical, booking is already saved
+    console.log('Email error:', String(err))
     return new Response(JSON.stringify({ emailError: String(err) }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
