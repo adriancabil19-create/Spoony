@@ -167,24 +167,33 @@ class _BookingScreenState extends State<BookingScreen> {
     setState(() => _isProcessing = true);
     try {
       final ref = _generateRef();
-      final data = await Supabase.instance.client.from('bookings').insert({
+      await Supabase.instance.client.from('bookings').insert({
         'user_id': user.id,
         'user_email': user.email ?? '',
         'guest_count': _guestCount,
         'start_date': _startDate!.toIso8601String().substring(0, 10),
         'end_date': _endDate!.toIso8601String().substring(0, 10),
-        'total_amount': _grandTotal,
+        'total_amount': double.parse(_grandTotal.toStringAsFixed(2)),
         'accommodation_type': _accommodationId,
         'transport_type': _transportId,
         'reference_code': ref,
         'status': 'pending',
-      }).select().single();
-      final bookingRef = (data['reference_code'] as String?) ?? ref;
-      if (mounted) setState(() { _isProcessing = false; _bookingRef = bookingRef; _bookingSuccess = true; });
+      });
+      if (mounted) setState(() { _isProcessing = false; _bookingRef = ref; _bookingSuccess = true; });
     } catch (e) {
       if (mounted) {
         setState(() => _isProcessing = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Booking failed: $e')));
+        final msg = e.toString().replaceAll('PostgrestException(', '').replaceAll(')', '');
+        showDialog(
+          context: context,
+          builder: (_) => AlertDialog(
+            title: const Text('Booking Failed'),
+            content: SingleChildScrollView(child: Text(msg)),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK')),
+            ],
+          ),
+        );
       }
     }
   }
