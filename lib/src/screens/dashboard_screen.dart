@@ -929,20 +929,70 @@ class _TripCardState extends State<_TripCard> {
                       border: pw.Border.all(color: border),
                       borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
                     ),
-                    child: pw.Column(
-                      children: itineraryLines.asMap().entries.map((e) =>
-                        pw.Container(
-                          color: e.key.isOdd ? rowAlt : white,
-                          padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    child: pw.Column(children: () {
+                      final dayRegex = RegExp(r'^Day (\d+): (.+)$');
+                      final widgets = <pw.Widget>[];
+                      bool firstDay = true;
+                      for (final line in itineraryLines) {
+                        final m = dayRegex.firstMatch(line.trim());
+                        if (m == null) continue;
+                        final dayNum = m.group(1)!;
+                        final content = m.group(2)!;
+                        final matchedPkg = tourPackages.where((p) => p.name == content).firstOrNull;
+                        final items = matchedPkg != null
+                            ? matchedPkg.highlights
+                            : content.split(', ').where((s) => s.trim().isNotEmpty && s != 'Free day').toList();
+
+                        if (!firstDay) {
+                          widgets.add(pw.Container(height: 1, color: border));
+                        }
+                        firstDay = false;
+
+                        // Day header row
+                        widgets.add(pw.Container(
+                          color: white,
+                          padding: const pw.EdgeInsets.fromLTRB(16, 12, 16, 6),
                           child: pw.Row(children: [
-                            pw.Container(width: 6, height: 6, decoration: pw.BoxDecoration(color: ocean, shape: pw.BoxShape.circle)),
+                            pw.Container(
+                              padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: pw.BoxDecoration(
+                                color: ocean,
+                                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+                              ),
+                              child: pw.Text('Day $dayNum',
+                                  style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold, color: white)),
+                            ),
                             pw.SizedBox(width: 10),
-                            pw.Expanded(child: pw.Text(e.value,
-                                style: pw.TextStyle(fontSize: 10, color: dark))),
+                            pw.Expanded(child: pw.Text(content,
+                                style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: dark))),
                           ]),
-                        ),
-                      ).toList(),
-                    ),
+                        ));
+
+                        // Sub-items
+                        for (final item in items) {
+                          widgets.add(pw.Container(
+                            color: rowAlt,
+                            padding: const pw.EdgeInsets.fromLTRB(36, 5, 16, 5),
+                            child: pw.Row(children: [
+                              pw.Container(width: 5, height: 5,
+                                  decoration: pw.BoxDecoration(color: teal, shape: pw.BoxShape.circle)),
+                              pw.SizedBox(width: 8),
+                              pw.Expanded(child: pw.Text(item,
+                                  style: pw.TextStyle(fontSize: 9, color: mid))),
+                            ]),
+                          ));
+                        }
+                        if (items.isEmpty) {
+                          widgets.add(pw.Container(
+                            color: rowAlt,
+                            padding: const pw.EdgeInsets.fromLTRB(36, 5, 16, 5),
+                            child: pw.Text('Free day / No destinations selected',
+                                style: pw.TextStyle(fontSize: 9, color: mid)),
+                          ));
+                        }
+                      }
+                      return widgets;
+                    }()),
                   ),
                 ] else if (isDIY) ...[
                   sectionLabel('YOUR CUSTOM ITINERARY'),

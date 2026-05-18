@@ -438,7 +438,16 @@ class _BookingsTabState extends State<_BookingsTab> {
               ? 'No bookings match your filters.'
               : _filter == 'all' ? 'No bookings yet.' : 'No $_filter bookings.')
         else
-          for (final b in _filtered) _BookingRow(booking: b, onApprove: _approve, onReject: _reject),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _filtered.length,
+            itemBuilder: (_, i) => _BookingRow(
+              booking: _filtered[i],
+              onApprove: _approve,
+              onReject: _reject,
+            ),
+          ),
       ],
     );
   }
