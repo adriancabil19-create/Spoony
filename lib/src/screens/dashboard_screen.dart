@@ -780,126 +780,126 @@ class _TripCardState extends State<_TripCard> {
   }
 
   Future<void> _downloadPdf() async {
-    final doc = pw.Document();
-    final ocean = PdfColor.fromHex('#0EA5E9');
-    final teal  = PdfColor.fromHex('#14B8A6');
-    final dark  = PdfColor.fromHex('#0F172A');
-    final mid   = PdfColor.fromHex('#64748B');
-    final lightBg = PdfColor.fromHex('#F0F9FF');
-    final border  = PdfColor.fromHex('#E2E8F0');
-    final rowAlt  = PdfColor.fromHex('#F8FAFC');
+    try {
+      final doc = pw.Document();
+      final ocean   = PdfColor.fromHex('#0EA5E9');
+      final teal    = PdfColor.fromHex('#14B8A6');
+      final dark    = PdfColor.fromHex('#0F172A');
+      final mid     = PdfColor.fromHex('#64748B');
+      final lightBg = PdfColor.fromHex('#F0F9FF');
+      final border  = PdfColor.fromHex('#E2E8F0');
+      final rowAlt  = PdfColor.fromHex('#F8FAFC');
 
-    pw.Widget detailRow(String label, String value, {bool alt = false, PdfColor? valueColor}) =>
-      pw.Container(
-        color: alt ? rowAlt : PdfColors.white,
-        padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 13),
-        child: pw.Row(children: [
-          pw.SizedBox(width: 160,
-            child: pw.Text(label, style: pw.TextStyle(fontSize: 11, color: mid))),
-          pw.Expanded(child: pw.Text(value,
-              style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: valueColor ?? dark))),
-        ]),
-      );
+      pw.Widget detailRow(String label, String value, {bool alt = false, PdfColor? valueColor}) =>
+        pw.Container(
+          color: alt ? rowAlt : PdfColors.white,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+          child: pw.Row(children: [
+            pw.SizedBox(width: 160,
+              child: pw.Text(label, style: pw.TextStyle(fontSize: 11, color: mid))),
+            pw.Expanded(child: pw.Text(value,
+                style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: valueColor ?? dark))),
+          ]),
+        );
 
-    doc.addPage(pw.Page(
-      pageFormat: PdfPageFormat.a4,
-      margin: pw.EdgeInsets.zero,
-      build: (ctx) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          // Header
-          pw.Container(
-            width: double.infinity,
-            padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
-            color: ocean,
-            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              pw.Text('🥄 Spoony Travel',
-                  style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-              pw.SizedBox(height: 4),
-              pw.Text('BOOKING ITINERARY',
-                  style: pw.TextStyle(fontSize: 12, color: const PdfColor(1, 1, 1, 0.75), letterSpacing: 2)),
-            ]),
-          ),
-          pw.Padding(
-            padding: const pw.EdgeInsets.all(48),
-            child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-              // Reference badge
-              pw.Container(
-                width: double.infinity,
-                padding: const pw.EdgeInsets.symmetric(vertical: 20, horizontal: 24),
-                decoration: pw.BoxDecoration(
-                  color: lightBg,
-                  border: pw.Border.all(color: PdfColor.fromHex('#BAE6FD')),
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
-                ),
-                child: pw.Column(children: [
-                  pw.Text('BOOKING REFERENCE',
-                      style: pw.TextStyle(fontSize: 10, color: ocean, fontWeight: pw.FontWeight.bold, letterSpacing: 1)),
-                  pw.SizedBox(height: 8),
-                  pw.Text(widget.ref,
-                      style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold, color: dark, letterSpacing: 3)),
-                ]),
-              ),
-              pw.SizedBox(height: 32),
-
-              // Details table
-              pw.Text('BOOKING DETAILS',
-                  style: pw.TextStyle(fontSize: 10, color: mid, fontWeight: pw.FontWeight.bold, letterSpacing: 1)),
-              pw.SizedBox(height: 12),
-              pw.Container(
-                decoration: pw.BoxDecoration(
-                  border: pw.Border.all(color: border),
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
-                ),
-                child: pw.Column(children: [
-                  detailRow('Tour Package',    widget.tourType.isNotEmpty ? widget.tourType : widget.title),
-                  detailRow('Check-in',        widget.startDate, alt: true),
-                  detailRow('Check-out',        widget.endDate),
-                  detailRow('Guests',           widget.guests, alt: true),
-                  detailRow('Accommodation',    _accLabel),
-                  detailRow('Transport',        _transLabel, alt: true),
-                  detailRow('Total Amount',     widget.amount, valueColor: teal),
-                ]),
-              ),
-              pw.SizedBox(height: 28),
-
-              // Info note
-              pw.Container(
-                padding: const pw.EdgeInsets.all(20),
-                decoration: pw.BoxDecoration(
-                  color: lightBg,
-                  borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
-                ),
-                child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-                  pw.Text('Important Information',
-                      style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: dark)),
-                  pw.SizedBox(height: 8),
-                  pw.Text(
-                    'Please bring this itinerary on the day of your tour. '
-                    'Our team will contact you to confirm pickup details and meeting point.',
-                    style: pw.TextStyle(fontSize: 11, color: mid, lineSpacing: 3),
-                  ),
-                ]),
-              ),
-              pw.Spacer(),
-
-              // Footer
-              pw.Divider(color: border),
-              pw.SizedBox(height: 10),
-              pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
-                pw.Text('Spoony Tours · Cebu, Philippines',
-                    style: pw.TextStyle(fontSize: 10, color: mid)),
-                pw.Text('spoonytraveltours@gmail.com',
-                    style: pw.TextStyle(fontSize: 10, color: ocean)),
+      doc.addPage(pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: pw.EdgeInsets.zero,
+        build: (ctx) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.symmetric(horizontal: 48, vertical: 40),
+              color: ocean,
+              child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                pw.Text('Spoony Travel and Tours',
+                    style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+                pw.SizedBox(height: 4),
+                pw.Text('BOOKING ITINERARY',
+                    style: pw.TextStyle(fontSize: 12, color: const PdfColor(1, 1, 1, 0.75), letterSpacing: 2)),
               ]),
-            ]),
-          ),
-        ],
-      ),
-    ));
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(48),
+              child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                pw.Container(
+                  width: double.infinity,
+                  padding: const pw.EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                  decoration: pw.BoxDecoration(
+                    color: lightBg,
+                    border: pw.Border.all(color: PdfColor.fromHex('#BAE6FD')),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+                  ),
+                  child: pw.Column(children: [
+                    pw.Text('BOOKING REFERENCE',
+                        style: pw.TextStyle(fontSize: 10, color: ocean, fontWeight: pw.FontWeight.bold, letterSpacing: 1)),
+                    pw.SizedBox(height: 8),
+                    pw.Text(widget.ref,
+                        style: pw.TextStyle(fontSize: 26, fontWeight: pw.FontWeight.bold, color: dark, letterSpacing: 3)),
+                  ]),
+                ),
+                pw.SizedBox(height: 32),
+                pw.Text('BOOKING DETAILS',
+                    style: pw.TextStyle(fontSize: 10, color: mid, fontWeight: pw.FontWeight.bold, letterSpacing: 1)),
+                pw.SizedBox(height: 12),
+                pw.Container(
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: border),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                  ),
+                  child: pw.Column(children: [
+                    detailRow('Tour Package',  widget.tourType.isNotEmpty ? widget.tourType : widget.title),
+                    detailRow('Check-in',      widget.startDate, alt: true),
+                    detailRow('Check-out',     widget.endDate),
+                    detailRow('Guests',        widget.guests, alt: true),
+                    detailRow('Accommodation', _accLabel),
+                    detailRow('Transport',     _transLabel, alt: true),
+                    detailRow('Total Amount',  widget.amount, valueColor: teal),
+                  ]),
+                ),
+                pw.SizedBox(height: 28),
+                pw.Container(
+                  padding: const pw.EdgeInsets.all(20),
+                  decoration: pw.BoxDecoration(
+                    color: lightBg,
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(10)),
+                  ),
+                  child: pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+                    pw.Text('Important Information',
+                        style: pw.TextStyle(fontSize: 12, fontWeight: pw.FontWeight.bold, color: dark)),
+                    pw.SizedBox(height: 8),
+                    pw.Text(
+                      'Please bring this itinerary on the day of your tour. '
+                      'Our team will contact you to confirm pickup details and meeting point.',
+                      style: pw.TextStyle(fontSize: 11, color: mid, lineSpacing: 3),
+                    ),
+                  ]),
+                ),
+                pw.Spacer(),
+                pw.Divider(color: border),
+                pw.SizedBox(height: 10),
+                pw.Row(mainAxisAlignment: pw.MainAxisAlignment.spaceBetween, children: [
+                  pw.Text('Spoony Tours · Cebu, Philippines',
+                      style: pw.TextStyle(fontSize: 10, color: mid)),
+                  pw.Text('spoonytraveltours@gmail.com',
+                      style: pw.TextStyle(fontSize: 10, color: ocean)),
+                ]),
+              ]),
+            ),
+          ],
+        ),
+      ));
 
-    final bytes = await doc.save();
-    await Printing.sharePdf(bytes: bytes, filename: 'Spoony_Itinerary_${widget.ref}.pdf');
+      final bytes = await doc.save();
+      await Printing.sharePdf(bytes: bytes, filename: 'Spoony_Itinerary_${widget.ref}.pdf');
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not generate PDF: $e')),
+        );
+      }
+    }
   }
 
   @override
