@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'home_screen.dart';
 import 'auth_screen.dart';
@@ -140,6 +141,19 @@ class _DriverScreenState extends State<DriverScreen> {
     }
   }
 
+  Future<void> _scanQR() async {
+    await showDialog(
+      context: context,
+      builder: (ctx) => _QrScanDialog(
+        onScanned: (code) {
+          Navigator.pop(ctx);
+          _refCtrl.text = code.toUpperCase();
+          _lookupByRef();
+        },
+      ),
+    );
+  }
+
   Future<void> _lookupByRef() async {
     final ref = _refCtrl.text.trim().toUpperCase();
     if (ref.isEmpty) return;
@@ -270,6 +284,11 @@ class _DriverScreenState extends State<DriverScreen> {
               hintText: 'e.g. CEB-A1B2C',
               hintStyle: const TextStyle(color: _kMid),
               prefixIcon: const Icon(Icons.qr_code, color: _kOcean),
+              suffixIcon: IconButton(
+                onPressed: _scanQR,
+                icon: const Icon(Icons.camera_alt, color: _kOcean),
+                tooltip: 'Scan QR Code',
+              ),
               filled: true,
               fillColor: Colors.white,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
@@ -752,4 +771,92 @@ class _TripCardState extends State<_TripCard> {
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kDark)),
         ]),
       );
+}
+
+// ── QR Scanner Dialog ────────────────────────────────────────────────────────
+
+class _QrScanDialog extends StatefulWidget {
+  final void Function(String) onScanned;
+  const _QrScanDialog({required this.onScanned});
+  @override
+  State<_QrScanDialog> createState() => _QrScanDialogState();
+}
+
+class _QrScanDialogState extends State<_QrScanDialog> {
+  late final MobileScannerController _ctrl;
+  bool _scanned = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = MobileScannerController();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: SizedBox(
+        width: 380,
+        height: 420,
+        child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+            child: Row(children: [
+              const Icon(Icons.qr_code_scanner, color: _kOcean, size: 22),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Text('Scan Guest QR Code',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kDark)),
+              ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, size: 20),
+              ),
+            ]),
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Text("Point the camera at the guest's QR ticket",
+                style: TextStyle(fontSize: 12, color: _kMid)),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+              child: Stack(children: [
+                MobileScanner(
+                  controller: _ctrl,
+                  onDetect: (capture) {
+                    if (_scanned) return;
+                    final raw = capture.barcodes.firstOrNull?.rawValue;
+                    if (raw != null && raw.isNotEmpty) {
+                      _scanned = true;
+                      widget.onScanned(raw);
+                    }
+                  },
+                ),
+                Center(
+                  child: Container(
+                    width: 220,
+                    height: 220,
+                    decoration: BoxDecoration(
+                      border: Border.all(color: _kOcean, width: 2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ]),
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
 }
