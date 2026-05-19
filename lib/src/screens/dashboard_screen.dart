@@ -239,6 +239,9 @@ class _UpcomingTripsTabState extends State<_UpcomingTripsTab> {
   bool _loading = true;
   List<Map<String, dynamic>> _bookings = [];
   String? _error;
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+  DateTime? _filterDate;
 
   @override
   void initState() {
@@ -246,15 +249,20 @@ class _UpcomingTripsTabState extends State<_UpcomingTripsTab> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     try {
       final result = await ApiService.getMyBookings();
       final all = (result['bookings'] as List).cast<Map<String, dynamic>>();
-      final now = DateTime.now();
       setState(() {
         _bookings = all.where((b) {
-          final end = DateTime.tryParse(b['end_date'] as String? ?? '');
-          return end != null && end.isAfter(now) && b['status'] != 'cancelled';
+          final s = b['status'] as String? ?? '';
+          return s == 'pending' || s == 'confirmed';
         }).toList();
         _loading = false;
       });
@@ -266,25 +274,100 @@ class _UpcomingTripsTabState extends State<_UpcomingTripsTab> {
     }
   }
 
+  List<Map<String, dynamic>> get _filtered {
+    var list = _bookings;
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      list = list.where((b) {
+        final ref  = (b['reference_code'] as String? ?? '').toLowerCase();
+        final tour = (b['tour_type']       as String? ?? '').toLowerCase();
+        return ref.contains(q) || tour.contains(q);
+      }).toList();
+    }
+    if (_filterDate != null) {
+      list = list.where((b) {
+        final start = DateTime.tryParse((b['start_date'] as String? ?? '').split('T').first);
+        final end   = DateTime.tryParse((b['end_date']   as String? ?? '').split('T').first);
+        if (start == null || end == null) return false;
+        final d = DateTime(_filterDate!.year, _filterDate!.month, _filterDate!.day);
+        return !d.isBefore(start) && !d.isAfter(end);
+      }).toList();
+    }
+    return list;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filtered = _filtered;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Upcoming Trips',
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
         const SizedBox(height: 4),
-        const Text('Get ready for your next adventure.',
+        const Text('Your pending and confirmed bookings.',
             style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
-        const SizedBox(height: 28),
+        const SizedBox(height: 20),
+        Row(children: [
+          Expanded(
+            child: TextField(
+              controller: _searchCtrl,
+              onChanged: (v) => setState(() => _searchQuery = v.trim()),
+              decoration: InputDecoration(
+                hintText: 'Search by reference or tour…',
+                hintStyle: const TextStyle(color: Color(0xFF8B99A6), fontSize: 13),
+                prefixIcon: const Icon(Icons.search, color: Color(0xFF8B99A6), size: 18),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0EA5E9))),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton.icon(
+            onPressed: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _filterDate ?? DateTime.now(),
+                firstDate: DateTime(2024),
+                lastDate: DateTime(2030),
+              );
+              if (picked != null) setState(() => _filterDate = picked);
+            },
+            icon: const Icon(Icons.calendar_today, size: 14),
+            label: Text(
+              _filterDate == null
+                  ? 'Date'
+                  : '${_filterDate!.year}-${_filterDate!.month.toString().padLeft(2, '0')}-${_filterDate!.day.toString().padLeft(2, '0')}',
+              style: const TextStyle(fontSize: 13),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _filterDate != null ? const Color(0xFF0EA5E9) : const Color(0xFF8B99A6),
+              side: BorderSide(color: _filterDate != null ? const Color(0xFF0EA5E9) : const Color(0xFFE2E8F0)),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          if (_filterDate != null) ...[
+            const SizedBox(width: 4),
+            IconButton(
+              onPressed: () => setState(() => _filterDate = null),
+              icon: const Icon(Icons.close, size: 16, color: Color(0xFF8B99A6)),
+            ),
+          ],
+        ]),
+        const SizedBox(height: 16),
         if (_loading)
           const Center(child: CircularProgressIndicator())
         else if (_error != null)
           _EmptyState(message: _error!)
-        else if (_bookings.isEmpty)
+        else if (filtered.isEmpty)
           const _EmptyState(message: 'No upcoming trips. Book one now!')
         else
-          for (final b in _bookings) ...[
+          for (final b in filtered) ...[
             _TripCard.fromBooking(b),
             const SizedBox(height: 20),
           ],

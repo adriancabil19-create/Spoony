@@ -28,7 +28,6 @@ class _DriverScreenState extends State<DriverScreen> {
   bool _loading = true;
   String? _error;
 
-  final _refCtrl    = TextEditingController();
   final _searchCtrl = TextEditingController();
   String   _searchQuery  = '';
   String   _statusFilter = 'all';
@@ -42,7 +41,6 @@ class _DriverScreenState extends State<DriverScreen> {
 
   @override
   void dispose() {
-    _refCtrl.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -124,84 +122,18 @@ class _DriverScreenState extends State<DriverScreen> {
     }
   }
 
-  Future<void> _checkIn(String bookingId) async {
-    try {
-      await Supabase.instance.client
-          .from('bookings')
-          .update({'status': 'confirmed'})
-          .eq('id', bookingId);
-      await _loadTrips();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Guest checked in successfully.')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Check-in failed: $e')),
-        );
-      }
-    }
-  }
-
   Future<void> _scanQR() async {
     await showDialog(
       context: context,
       builder: (ctx) => _QrScanDialog(
         onScanned: (code) {
           Navigator.pop(ctx);
-          _refCtrl.text = code.toUpperCase();
-          _lookupByRef();
+          final ref = code.toUpperCase();
+          _searchCtrl.text = ref;
+          setState(() => _searchQuery = ref);
         },
       ),
     );
-  }
-
-  Future<void> _lookupByRef() async {
-    final ref = _refCtrl.text.trim().toUpperCase();
-    if (ref.isEmpty) return;
-    try {
-      final data = await Supabase.instance.client
-          .from('bookings')
-          .select()
-          .eq('reference_code', ref)
-          .maybeSingle();
-      if (!mounted) return;
-      if (data == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking not found.')),
-        );
-        return;
-      }
-      final bookingId = data['id'] as String;
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Confirm Check-in'),
-          content: Text(
-            'Booking: ${data['reference_code']}\n'
-            'Guest: ${data['user_email'] ?? '—'}\n'
-            'Tour: ${data['tour_type'] ?? '—'}\n'
-            'Guests: ${data['guest_count'] ?? 1}',
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: FilledButton.styleFrom(backgroundColor: _kTeal),
-              child: const Text('Check In'),
-            ),
-          ],
-        ),
-      );
-      if (confirm == true) {
-        await _checkIn(bookingId);
-        _refCtrl.clear();
-      }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-    }
   }
 
   List<Map<String, dynamic>> get _filtered {
@@ -272,48 +204,6 @@ class _DriverScreenState extends State<DriverScreen> {
       ]),
       const SizedBox(height: 32),
 
-      // ── Guest Check-in ──────────────────────────────────────────────────────
-      const Text('Guest Check-in',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _kDark)),
-      const SizedBox(height: 4),
-      const Text("Enter the booking reference from the guest's QR ticket.",
-          style: TextStyle(fontSize: 13, color: _kMid)),
-      const SizedBox(height: 12),
-      Row(children: [
-        Expanded(
-          child: TextField(
-            controller: _refCtrl,
-            textCapitalization: TextCapitalization.characters,
-            decoration: InputDecoration(
-              hintText: 'e.g. CEB-A1B2C',
-              hintStyle: const TextStyle(color: _kMid),
-              prefixIcon: const Icon(Icons.qr_code, color: _kOcean),
-              suffixIcon: IconButton(
-                onPressed: _scanQR,
-                icon: const Icon(Icons.camera_alt, color: _kOcean),
-                tooltip: 'Scan QR Code',
-              ),
-              filled: true,
-              fillColor: Colors.white,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: _kOcean, width: 1.5)),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        FilledButton(
-          onPressed: _lookupByRef,
-          style: FilledButton.styleFrom(
-            backgroundColor: _kOcean,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-          child: const Text('Check In', style: TextStyle(fontWeight: FontWeight.w700)),
-        ),
-      ]),
-      const SizedBox(height: 40),
-
       // ── Trips header ────────────────────────────────────────────────────────
       Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         const Text('My Assigned Trips',
@@ -329,9 +219,14 @@ class _DriverScreenState extends State<DriverScreen> {
             controller: _searchCtrl,
             onChanged: (v) => setState(() => _searchQuery = v.trim()),
             decoration: InputDecoration(
-              hintText: 'Search by reference or email…',
+              hintText: 'Search by reference or guest email…',
               hintStyle: const TextStyle(color: _kMid, fontSize: 13),
               prefixIcon: const Icon(Icons.search, color: _kMid, size: 18),
+              suffixIcon: IconButton(
+                onPressed: _scanQR,
+                icon: const Icon(Icons.camera_alt, color: _kOcean),
+                tooltip: 'Scan QR Code',
+              ),
               filled: true,
               fillColor: Colors.white,
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -383,9 +278,7 @@ class _DriverScreenState extends State<DriverScreen> {
         child: Row(children: [
           _statusChip('All',       'all',       _kOcean,                   _trips.length),
           const SizedBox(width: 8),
-          _statusChip('Upcoming',    'pending',   const Color(0xFFFFC107),   _countByStatus('pending')),
-          const SizedBox(width: 8),
-          _statusChip('In Progress', 'confirmed', const Color(0xFF50C878),   _countByStatus('confirmed')),
+          _statusChip('Upcoming',  'pending',   const Color(0xFFFFC107),   _countByStatus('pending')),
           const SizedBox(width: 8),
           _statusChip('Completed', 'completed', _kTeal,                    _countByStatus('completed')),
           const SizedBox(width: 8),
@@ -425,7 +318,6 @@ class _DriverScreenState extends State<DriverScreen> {
           itemCount: _filtered.length,
           itemBuilder: (_, i) => _TripCard(
             booking: _filtered[i],
-            onCheckIn: _checkIn,
             onComplete: _complete,
           ),
         ),
@@ -475,10 +367,9 @@ class _DriverScreenState extends State<DriverScreen> {
 
 class _TripCard extends StatefulWidget {
   final Map<String, dynamic> booking;
-  final Future<void> Function(String) onCheckIn;
   final Future<void> Function(String, Map<String, dynamic>) onComplete;
 
-  const _TripCard({required this.booking, required this.onCheckIn, required this.onComplete});
+  const _TripCard({required this.booking, required this.onComplete});
 
   @override
   State<_TripCard> createState() => _TripCardState();
@@ -577,22 +468,6 @@ class _TripCardState extends State<_TripCard> {
             _iconRow(Icons.tour, tourType),
             const SizedBox(height: 6),
             _iconRow(Icons.people, '$guests guest${guests != 1 ? 's' : ''}'),
-            if (status == 'pending') ...[
-              const SizedBox(height: 14),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: () => widget.onCheckIn(id),
-                  icon: const Icon(Icons.check_circle_outline, size: 16),
-                  label: const Text('Check In Guest', style: TextStyle(fontWeight: FontWeight.w700)),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _kTeal,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
-              ),
-            ],
             if (status == 'confirmed') ...[
               const SizedBox(height: 14),
               SizedBox(
