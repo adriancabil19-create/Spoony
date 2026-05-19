@@ -1,4 +1,5 @@
-import 'dart:html' as html;
+import 'dart:js_interop';
+import 'package:web/web.dart' as web;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -1061,12 +1062,16 @@ class _TripCardState extends State<_TripCard> {
       ));
 
       final bytes = await doc.save();
-      final blob = html.Blob([bytes], 'application/pdf');
-      final url = html.Url.createObjectUrlFromBlob(blob);
-      html.AnchorElement(href: url)
+      final blob = web.Blob(
+        [bytes.toJS].toJS,
+        web.BlobPropertyBag(type: 'application/pdf'),
+      );
+      final url = web.URL.createObjectURL(blob);
+      (web.document.createElement('a') as web.HTMLAnchorElement)
+        ..href = url
         ..setAttribute('download', 'Spoony_Itinerary_${widget.ref}.pdf')
         ..click();
-      html.Url.revokeObjectUrl(url);
+      web.URL.revokeObjectURL(url);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
