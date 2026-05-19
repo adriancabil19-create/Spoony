@@ -1,11 +1,11 @@
 {
-    "name": "spoony_web",
-    "short_name": "spoony_web",
+    "name": "Spoony Travel and Tours",
+    "short_name": "Spoony",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0F172A",
+    "theme_color": "#0EA5E9",
+    "description": "Book your Cebu tour with Spoony Travel and Tours.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
