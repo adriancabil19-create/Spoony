@@ -387,6 +387,9 @@ class _BookingHistoryTabState extends State<_BookingHistoryTab> {
   bool _loading = true;
   List<Map<String, dynamic>> _bookings = [];
   String? _error;
+  final _searchCtrl = TextEditingController();
+  String _searchQuery  = '';
+  String _statusFilter = 'all';
 
   @override
   void initState() {
@@ -394,45 +397,118 @@ class _BookingHistoryTabState extends State<_BookingHistoryTab> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     try {
       final result = await ApiService.getMyBookings();
       final all = (result['bookings'] as List).cast<Map<String, dynamic>>();
-      final now = DateTime.now();
       setState(() {
-        _bookings = all.where((b) {
-          final end = DateTime.tryParse(b['end_date'] as String? ?? '');
-          return end == null || end.isBefore(now) || b['status'] == 'cancelled';
-        }).toList();
-        _loading = false;
+        _bookings = all.toList();
+        _loading  = false;
       });
     } catch (_) {
       setState(() {
-        _error = 'Could not load booking history.';
+        _error   = 'Could not load booking history.';
         _loading = false;
       });
     }
   }
 
+  List<Map<String, dynamic>> get _filtered {
+    var list = _bookings;
+    if (_statusFilter != 'all') {
+      list = list.where((b) => (b['status'] as String? ?? '') == _statusFilter).toList();
+    }
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      list = list.where((b) {
+        final ref  = (b['reference_code'] as String? ?? '').toLowerCase();
+        final tour = (b['tour_type']       as String? ?? '').toLowerCase();
+        return ref.contains(q) || tour.contains(q);
+      }).toList();
+    }
+    return list;
+  }
+
+  int _count(String s) => _bookings.where((b) => (b['status'] as String? ?? '') == s).length;
+
+  Widget _chip(String label, String value, Color color) {
+    final sel = _statusFilter == value;
+    return GestureDetector(
+      onTap: () => setState(() => _statusFilter = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: sel ? color.withValues(alpha: 0.12) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: sel ? color : const Color(0xFFE2E8F0)),
+        ),
+        child: Text(
+          value == 'all' ? 'All (${_bookings.length})' : '$label (${_count(value)})',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+              color: sel ? color : const Color(0xFF8B99A6)),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final filtered = _filtered;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Booking History',
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
         const SizedBox(height: 4),
-        const Text('All your past trips and reservations.',
+        const Text('All your bookings and reservations.',
             style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
-        const SizedBox(height: 28),
+        const SizedBox(height: 20),
+        TextField(
+          controller: _searchCtrl,
+          onChanged: (v) => setState(() => _searchQuery = v.trim()),
+          decoration: InputDecoration(
+            hintText: 'Search by reference or tour…',
+            hintStyle: const TextStyle(color: Color(0xFF8B99A6), fontSize: 13),
+            prefixIcon: const Icon(Icons.search, color: Color(0xFF8B99A6), size: 18),
+            filled: true,
+            fillColor: const Color(0xFFF8FAFC),
+            contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0EA5E9))),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(children: [
+            _chip('All',       'all',       const Color(0xFF006994)),
+            const SizedBox(width: 8),
+            _chip('Pending',   'pending',   const Color(0xFFFFC107)),
+            const SizedBox(width: 8),
+            _chip('Confirmed', 'confirmed', const Color(0xFF50C878)),
+            const SizedBox(width: 8),
+            _chip('Completed', 'completed', const Color(0xFF0EA5E9)),
+            const SizedBox(width: 8),
+            _chip('Cancelled', 'cancelled', const Color(0xFFFF6B4A)),
+          ]),
+        ),
+        const SizedBox(height: 16),
         if (_loading)
           const Center(child: CircularProgressIndicator())
         else if (_error != null)
           _EmptyState(message: _error!)
-        else if (_bookings.isEmpty)
-          const _EmptyState(message: 'No booking history yet.')
+        else if (filtered.isEmpty)
+          const _EmptyState(message: 'No bookings found.')
         else
-          for (final b in _bookings) ...[
+          for (final b in filtered) ...[
             _TripCard.fromBooking(b),
             const SizedBox(height: 20),
           ],

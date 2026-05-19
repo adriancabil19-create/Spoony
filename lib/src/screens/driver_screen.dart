@@ -168,23 +168,24 @@ class _DriverScreenState extends State<DriverScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _kBg,
-      body: SingleChildScrollView(
-        child: Column(children: [
+      body: Column(
+        children: [
           SpoonyNavBar(current: 'driver'),
-          LayoutBuilder(builder: (context, constraints) {
-            final hPad = constraints.maxWidth >= 700 ? 80.0 : 20.0;
-            return Padding(
-              padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 32),
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _error != null
-                      ? Center(child: Text('Error: $_error', style: const TextStyle(color: Colors.red)))
-                      : _buildContent(),
-            );
-          }),
-          const SizedBox(height: 48),
+          Expanded(
+            child: LayoutBuilder(builder: (context, constraints) {
+              final hPad = constraints.maxWidth >= 700 ? 80.0 : 20.0;
+              return SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 32),
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _error != null
+                        ? Center(child: Text('Error: $_error', style: const TextStyle(color: Colors.red)))
+                        : _buildContent(),
+              );
+            }),
+          ),
           const SpoonyFooter(),
-        ]),
+        ],
       ),
     );
   }

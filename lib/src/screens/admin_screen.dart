@@ -118,7 +118,11 @@ class _AdminScreenState extends State<AdminScreen> {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    Expanded(child: _buildContent()),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: _buildContent(),
+                      ),
+                    ),
                   ]),
                 );
               }
@@ -187,7 +191,11 @@ class _AdminScreenState extends State<AdminScreen> {
                       ),
                     ),
                     const SizedBox(width: 32),
-                    Expanded(child: _buildContent()),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: _buildContent(),
+                      ),
+                    ),
                   ],
                 ),
               );
@@ -654,58 +662,83 @@ class _BookingRowState extends State<_BookingRow> {
               Expanded(child: _InfoRow(icon: Icons.tour, label: 'Tour Package', value: tourType)),
           ]),
 
-          // ── Assign driver ──────────────────────────────────────────────────
-          const SizedBox(height: 12),
-          const Divider(height: 1, color: Color(0xFFF0F4F5)),
-          const SizedBox(height: 12),
-          Row(children: [
-            const Icon(Icons.drive_eta, size: 14, color: Color(0xFF8B99A6)),
-            const SizedBox(width: 6),
-            const Text('Assigned Driver',
-                style: TextStyle(fontSize: 11, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
-          ]),
-          const SizedBox(height: 6),
-          if (widget.drivers.isEmpty)
-            const Text('No drivers yet — add one in Manage Drivers.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF8B99A6)))
-          else
+          // ── Assign driver (confirmed = editable, completed = read-only, pending = hidden) ──
+          if (status == 'confirmed') ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0xFFF0F4F5)),
+            const SizedBox(height: 12),
             Row(children: [
-              Expanded(
-                child: DropdownButtonFormField<String?>(
-                  initialValue: currentDriverId,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    filled: true,
-                    fillColor: const Color(0xFFF8FAFC),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF0EA5E9))),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  ),
-                  hint: const Text('Unassigned', style: TextStyle(fontSize: 13, color: Color(0xFF8B99A6))),
-                  items: [
-                    const DropdownMenuItem<String?>(value: null, child: Text('Unassigned', style: TextStyle(fontSize: 13))),
-                    ...widget.drivers.map((d) => DropdownMenuItem<String?>(
-                      value: d['id'] as String,
-                      child: Text(
-                        '${d['full_name']} · ${d['vehicle_type']}',
-                        style: const TextStyle(fontSize: 13),
-                      ),
-                    )),
-                  ],
-                  onChanged: _assigningDriver ? null : (v) => _assignDriver(id, v),
-                ),
-              ),
-              if (_assigningDriver) ...[
-                const SizedBox(width: 10),
-                const SizedBox(width: 18, height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0EA5E9))),
-              ],
+              const Icon(Icons.drive_eta, size: 14, color: Color(0xFF8B99A6)),
+              const SizedBox(width: 6),
+              const Text('Assigned Driver',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
             ]),
-          if (currentDriver != null) ...[
-            const SizedBox(height: 4),
-            Text('${currentDriver['full_name']} · ${currentDriver['phone'] ?? ''}',
-                style: const TextStyle(fontSize: 11, color: Color(0xFF50C878), fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            if (widget.drivers.isEmpty)
+              const Text('No drivers yet — add one in Manage Drivers.',
+                  style: TextStyle(fontSize: 12, color: Color(0xFF8B99A6)))
+            else
+              Row(children: [
+                Expanded(
+                  child: DropdownButtonFormField<String?>(
+                    initialValue: currentDriverId,
+                    decoration: const InputDecoration(
+                      isDense: true,
+                      filled: true,
+                      fillColor: Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(8)), borderSide: BorderSide(color: Color(0xFFE2E8F0))),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(8)), borderSide: BorderSide(color: Color(0xFFE2E8F0))),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(8)), borderSide: BorderSide(color: Color(0xFF0EA5E9))),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                    hint: const Text('Unassigned', style: TextStyle(fontSize: 13, color: Color(0xFF8B99A6))),
+                    items: [
+                      const DropdownMenuItem<String?>(value: null, child: Text('Unassigned', style: TextStyle(fontSize: 13))),
+                      ...widget.drivers.map((d) => DropdownMenuItem<String?>(
+                        value: d['id'] as String,
+                        child: Text('${d['full_name']} · ${d['vehicle_type']}',
+                            style: const TextStyle(fontSize: 13)),
+                      )),
+                    ],
+                    onChanged: _assigningDriver ? null : (v) => _assignDriver(id, v),
+                  ),
+                ),
+                if (_assigningDriver) ...[
+                  const SizedBox(width: 10),
+                  const SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0EA5E9))),
+                ],
+              ]),
+            if (currentDriver != null) ...[
+              const SizedBox(height: 4),
+              Text('${currentDriver['full_name']} · ${currentDriver['phone'] ?? ''}',
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF50C878), fontWeight: FontWeight.w600)),
+            ],
+          ] else if (status == 'completed' && currentDriver != null) ...[
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0xFFF0F4F5)),
+            const SizedBox(height: 12),
+            Row(children: [
+              const Icon(Icons.drive_eta, size: 14, color: Color(0xFF8B99A6)),
+              const SizedBox(width: 6),
+              const Text('Assigned Driver',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
+            ]),
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(children: [
+                const Icon(Icons.person, size: 14, color: Color(0xFF8B99A6)),
+                const SizedBox(width: 8),
+                Text('${currentDriver['full_name']} · ${currentDriver['phone'] ?? ''}',
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A))),
+              ]),
+            ),
           ],
 
           if (status == 'pending') ...[
