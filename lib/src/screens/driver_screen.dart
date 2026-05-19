@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
+import 'dart:ui_web' as ui_web;
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:web/web.dart' as web;
 import 'home_screen.dart';
 import 'auth_screen.dart';
 
@@ -773,7 +777,13 @@ class _TripCardState extends State<_TripCard> {
       );
 }
 
-// ── QR Scanner Dialog ────────────────────────────────────────────────────────
+// ── QR Scanner Dialog (native browser camera + BarcodeDetector API) ──────────
+
+@JS('BarcodeDetector')
+extension type _JsBarcodeDetector._(JSObject _) implements JSObject {
+  external factory _JsBarcodeDetector(JSObject options);
+  external JSPromise<JSArray<JSObject>> detect(JSAny source);
+}
 
 class _QrScanDialog extends StatefulWidget {
   final void Function(String) onScanned;
@@ -783,19 +793,87 @@ class _QrScanDialog extends StatefulWidget {
 }
 
 class _QrScanDialogState extends State<_QrScanDialog> {
-  late final MobileScannerController _ctrl;
-  bool _scanned = false;
+  static int _idCounter = 0;
+  late final String _viewId;
+  late final web.HTMLVideoElement _video;
+  web.MediaStream? _stream;
+  Timer? _timer;
+  bool _scanned      = false;
+  bool _cameraError  = false;
+  bool _unsupported  = false;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = MobileScannerController();
+    _viewId = 'qr-scanner-${_idCounter++}';
+    _video  = web.HTMLVideoElement();
+    _video.setAttribute('style', 'width:100%;height:100%;object-fit:cover;');
+    _video.setAttribute('playsinline', 'true');
+    _video.autoplay = true;
+    _video.muted    = true;
+    ui_web.platformViewRegistry.registerViewFactory(
+      _viewId, (int id) => _video,
+    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startCamera());
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _timer?.cancel();
+    _stopStream();
     super.dispose();
+  }
+
+  void _stopStream() {
+    final s = _stream;
+    if (s == null) return;
+    for (final t in s.getTracks().toDart) { t.stop(); }
+  }
+
+  Future<void> _startCamera() async {
+    if (!mounted) return;
+    try {
+      final constraints =
+          {'video': true}.jsify() as web.MediaStreamConstraints;
+      final stream = await web.window.navigator.mediaDevices
+          .getUserMedia(constraints)
+          .toDart;
+      if (!mounted) {
+        for (final t in stream.getTracks().toDart) { t.stop(); }
+        return;
+      }
+      _stream = stream;
+      _video.srcObject = stream;
+      try { await _video.play().toDart; } catch (_) {}
+      _timer = Timer.periodic(
+        const Duration(milliseconds: 600), (_) => _scan(),
+      );
+    } catch (_) {
+      if (mounted) setState(() => _cameraError = true);
+    }
+  }
+
+  Future<void> _scan() async {
+    if (_scanned || !mounted) return;
+    if (!globalContext.has('BarcodeDetector')) {
+      _timer?.cancel();
+      if (mounted) setState(() => _unsupported = true);
+      return;
+    }
+    try {
+      final det = _JsBarcodeDetector(
+        {'formats': ['qr_code'].jsify()}.jsify() as JSObject,
+      );
+      final results = (await det.detect(_video).toDart).toDart;
+      if (results.isNotEmpty && !_scanned) {
+        final raw =
+            results.first.getProperty<JSString?>('rawValue'.toJS)?.toDart;
+        if (raw != null && raw.isNotEmpty) {
+          _scanned = true;
+          widget.onScanned(raw);
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -803,60 +881,60 @@ class _QrScanDialogState extends State<_QrScanDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SizedBox(
-        width: 380,
-        height: 420,
+        width: 380, height: 440,
         child: Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
             child: Row(children: [
               const Icon(Icons.qr_code_scanner, color: _kOcean, size: 22),
               const SizedBox(width: 10),
-              const Expanded(
-                child: Text('Scan Guest QR Code',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kDark)),
-              ),
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close, size: 20),
-              ),
+              const Expanded(child: Text('Scan Guest QR Code',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: _kDark))),
+              IconButton(onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close, size: 20)),
             ]),
           ),
           const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
+            padding: EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Text("Point the camera at the guest's QR ticket",
                 style: TextStyle(fontSize: 12, color: _kMid)),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Expanded(
             child: ClipRRect(
               borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-              child: Stack(children: [
-                MobileScanner(
-                  controller: _ctrl,
-                  onDetect: (capture) {
-                    if (_scanned) return;
-                    final raw = capture.barcodes.firstOrNull?.rawValue;
-                    if (raw != null && raw.isNotEmpty) {
-                      _scanned = true;
-                      widget.onScanned(raw);
-                    }
-                  },
-                ),
-                Center(
-                  child: Container(
-                    width: 220,
-                    height: 220,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: _kOcean, width: 2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ]),
+              child: _cameraError
+                  ? _errMsg('Camera access denied.\nAllow camera permission and try again.')
+                  : _unsupported
+                      ? _errMsg('QR scanning requires Chrome or Edge.')
+                      : Stack(children: [
+                          HtmlElementView(viewType: _viewId),
+                          Center(
+                            child: Container(
+                              width: 220, height: 220,
+                              decoration: BoxDecoration(
+                                border: Border.all(color: _kOcean, width: 2),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ]),
             ),
           ),
         ]),
       ),
     );
   }
+
+  Widget _errMsg(String msg) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        const Icon(Icons.no_photography_outlined, color: _kMid, size: 48),
+        const SizedBox(height: 12),
+        Text(msg, textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, color: _kMid, height: 1.5)),
+      ]),
+    ),
+  );
 }
