@@ -74,54 +74,47 @@ class _AdminScreenState extends State<AdminScreen> {
                               horizontal: 12,
                               vertical: 16,
                             ),
-                            child: Column(
-                              children: [
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    children: List.generate(_tabs.length, (i) {
-                                      final (icon, label) = _tabs[i];
-                                      final sel = _tab == i;
-                                      return Padding(
-                                        padding: const EdgeInsets.only(
-                                          right: 8,
-                                        ),
-                                        child: GestureDetector(
-                                          onTap: () => setState(() => _tab = i),
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 10,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: sel
-                                                  ? const Color(0xFFE0F7FA)
-                                                  : Colors.white,
-                                              borderRadius:
-                                                  BorderRadius.circular(20),
-                                              border: Border.all(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                children: [
+                                  SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Row(
+                                      children: List.generate(_tabs.length, (
+                                        i,
+                                      ) {
+                                        final (icon, label) = _tabs[i];
+                                        final sel = _tab == i;
+                                        return Padding(
+                                          padding: const EdgeInsets.only(
+                                            right: 8,
+                                          ),
+                                          child: GestureDetector(
+                                            onTap: () =>
+                                                setState(() => _tab = i),
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 10,
+                                                  ),
+                                              decoration: BoxDecoration(
                                                 color: sel
-                                                    ? const Color(0xFF00BCD4)
-                                                    : const Color(0xFFE8EDEF),
-                                              ),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  icon,
-                                                  size: 15,
+                                                    ? const Color(0xFFE0F7FA)
+                                                    : Colors.white,
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                                border: Border.all(
                                                   color: sel
-                                                      ? const Color(0xFF006994)
-                                                      : const Color(0xFF8B99A6),
+                                                      ? const Color(0xFF00BCD4)
+                                                      : const Color(0xFFE8EDEF),
                                                 ),
-                                                const SizedBox(width: 6),
-                                                Text(
-                                                  label,
-                                                  style: TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: sel
-                                                        ? FontWeight.w700
-                                                        : FontWeight.w500,
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    icon,
+                                                    size: 15,
                                                     color: sel
                                                         ? const Color(
                                                             0xFF006994,
@@ -130,22 +123,35 @@ class _AdminScreenState extends State<AdminScreen> {
                                                             0xFF8B99A6,
                                                           ),
                                                   ),
-                                                ),
-                                              ],
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    label,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight: sel
+                                                          ? FontWeight.w700
+                                                          : FontWeight.w500,
+                                                      color: sel
+                                                          ? const Color(
+                                                              0xFF006994,
+                                                            )
+                                                          : const Color(
+                                                              0xFF8B99A6,
+                                                            ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      );
-                                    }),
+                                        );
+                                      }),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 20),
-                                Expanded(
-                                  child: SingleChildScrollView(
-                                    child: _buildContent(),
-                                  ),
-                                ),
-                              ],
+                                  const SizedBox(height: 20),
+                                  _buildContent(),
+                                ],
+                              ),
                             ),
                           );
                         }
