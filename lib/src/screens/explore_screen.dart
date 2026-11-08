@@ -31,6 +31,15 @@ class _ExploreScreenState extends State<ExploreScreen> {
     _loadDestinations();
   }
 
+  /// DB rows saved before the Wikimedia switch still hold old Unsplash links.
+  /// Those must not override the built-in photos, which carry the photo credit
+  /// and the face/plate-blurred copies. Admin-uploaded images are kept.
+  static List<String> _preferredImages(Object? dbUrls, List<String> fallback) {
+    final urls = (dbUrls as List?)?.whereType<String>().where((u) => u.trim().isNotEmpty).toList() ?? const [];
+    final custom = urls.where((u) => !u.contains('images.unsplash.com')).toList();
+    return custom.isNotEmpty ? custom : fallback;
+  }
+
   static DestinationRegion _parseRegion(String? r) {
     switch (r) {
       case 'cebu_city':   case 'cebuCity':   return DestinationRegion.cebuCity;
@@ -70,9 +79,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
               name: db['name'] as String? ?? d.name,
               description: db['description'] as String? ?? d.description,
               region: d.region,
-              images: (db['image_urls'] as List?)?.isNotEmpty == true
-                  ? (db['image_urls'] as List).cast<String>()
-                  : d.images,
+              images: _preferredImages(db['image_urls'], d.images),
               entranceFee: (db['entrance_fee'] as num?)?.toDouble() ?? d.entranceFee,
               rating: (db['rating'] as num?)?.toDouble() ?? d.rating,
               reviews: d.reviews,

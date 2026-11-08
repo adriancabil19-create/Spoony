@@ -1756,7 +1756,16 @@ class _SpotRow extends StatelessWidget {
     final fee = feeNum == 0 ? 'Free entrance' : '₱${feeNum.toStringAsFixed(0)} entrance';
     final isDefault = spot['_isDefault'] == true;
     final urls = (spot['image_urls'] as List?)?.cast<String>() ?? const <String>[];
-    final img = urls.isNotEmpty ? urls.first : null;
+    // Legacy Unsplash links in the DB are replaced by the built-in Wikimedia photo
+    // (same rule as the Explore screen), so admins see what visitors see.
+    final name = (spot['name'] as String? ?? '').toLowerCase();
+    final builtIn = cebuDestinations.where((d) => d.name.toLowerCase() == name && d.images.isNotEmpty);
+    final custom = urls.where((u) => !u.contains('images.unsplash.com')).toList();
+    final img = custom.isNotEmpty
+        ? custom.first
+        : builtIn.isNotEmpty
+            ? builtIn.first.images.first
+            : (urls.isNotEmpty ? urls.first : null);
     final blurred = img != null && privacyImages.containsKey(img);
     final region = _ManageSpotsTabState.regionLabel(spot['region'] as String?);
 
