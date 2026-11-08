@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
@@ -7,6 +8,7 @@ import 'screens/booking_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/admin_screen.dart';
 import 'screens/driver_screen.dart';
+import 'recovery_flag.dart';
 
 class _FadePageTransition extends PageTransitionsBuilder {
   const _FadePageTransition();
@@ -36,14 +38,15 @@ class SpoonyApp extends StatelessWidget {
           title: 'Spoony Cebu Travel',
           theme: ThemeData(
             brightness: Brightness.light,
-            primaryColor: const Color(0xFF0EA5E9),
+            primaryColor: const Color(0xFFD96A2B),
             colorScheme: ColorScheme.fromSeed(
-              seedColor: const Color(0xFF0EA5E9),
-              primary: const Color(0xFF0EA5E9),
-              secondary: const Color(0xFF14B8A6),
+              seedColor: const Color(0xFFD96A2B),
+              primary: const Color(0xFFD96A2B),
+              secondary: const Color(0xFF3F7D58),
             ),
             scaffoldBackgroundColor: const Color(0xFFF8FAFC),
-            fontFamily: 'Inter',
+            // Inter for UI text, Poppins for display headings (see textTheme).
+            fontFamily: GoogleFonts.inter().fontFamily,
             pageTransitionsTheme: const PageTransitionsTheme(
               builders: {
                 TargetPlatform.android: _FadePageTransition(),
@@ -53,7 +56,7 @@ class SpoonyApp extends StatelessWidget {
                 TargetPlatform.windows: _FadePageTransition(),
               },
             ),
-            textTheme: ThemeData.light().textTheme.copyWith(
+            textTheme: GoogleFonts.interTextTheme(ThemeData.light().textTheme).copyWith(
                   headlineLarge: const TextStyle(
                     fontSize: 34,
                     fontWeight: FontWeight.w800,
@@ -62,7 +65,7 @@ class SpoonyApp extends StatelessWidget {
                   titleLarge: const TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0EA5E9),
+                    color: Color(0xFFD96A2B),
                   ),
                   bodyLarge: const TextStyle(
                     fontSize: 16,
@@ -70,8 +73,11 @@ class SpoonyApp extends StatelessWidget {
                   ),
                 ),
           ),
-          initialRoute: AuthScreen.routeName,
+          initialRoute: '/',
           routes: {
+            // Visitors land on the home page. The login screen only takes over the root
+            // URL when returning from an OAuth / password-recovery link.
+            '/': (context) => kHasRecoveryToken ? const AuthScreen() : const HomeScreen(),
             AuthScreen.routeName: (context) => const AuthScreen(),
             HomeScreen.routeName: (context) => const HomeScreen(),
             ExploreScreen.routeName: (context) => const ExploreScreen(),

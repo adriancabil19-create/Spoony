@@ -8,8 +8,8 @@ import 'package:web/web.dart' as web;
 import 'home_screen.dart';
 import 'auth_screen.dart';
 
-const _kOcean = Color(0xFF0EA5E9);
-const _kTeal = Color(0xFF14B8A6);
+const _kAccent = Color(0xFFD96A2B);
+const _kGreen = Color(0xFF3F7D58);
 const _kDark = Color(0xFF0F172A);
 const _kMid = Color(0xFF64748B);
 const _kBg = Color(0xFFF8FAFC);
@@ -48,8 +48,9 @@ class _DriverScreenState extends State<DriverScreen> {
   Future<void> _init() async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user == null) {
-      if (mounted)
+      if (mounted) {
         Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+      }
       return;
     }
     try {
@@ -59,18 +60,20 @@ class _DriverScreenState extends State<DriverScreen> {
           .eq('email', user.email ?? '')
           .maybeSingle();
       if (data == null) {
-        if (mounted)
+        if (mounted) {
           Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+        }
         return;
       }
       _driver = data;
       await _loadTrips();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _error = e.toString();
           _loading = false;
         });
+      }
     }
   }
 
@@ -90,11 +93,12 @@ class _DriverScreenState extends State<DriverScreen> {
         });
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _error = e.toString();
           _loading = false;
         });
+      }
     }
   }
 
@@ -197,7 +201,7 @@ class _DriverScreenState extends State<DriverScreen> {
       backgroundColor: _kBg,
       body: Column(
         children: [
-          SpoonyNavBar(current: 'driver'),
+          const SpoonyNavBar(current: 'driver'),
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) {
@@ -275,7 +279,7 @@ class _DriverScreenState extends State<DriverScreen> {
             ),
             IconButton(
               onPressed: _loadTrips,
-              icon: const Icon(Icons.refresh, color: _kOcean),
+              icon: const Icon(Icons.refresh, color: _kAccent),
             ),
           ],
         ),
@@ -294,7 +298,7 @@ class _DriverScreenState extends State<DriverScreen> {
                   prefixIcon: const Icon(Icons.search, color: _kMid, size: 18),
                   suffixIcon: IconButton(
                     onPressed: _scanQR,
-                    icon: const Icon(Icons.camera_alt, color: _kOcean),
+                    icon: const Icon(Icons.camera_alt, color: _kAccent),
                     tooltip: 'Scan QR Code',
                   ),
                   filled: true,
@@ -310,7 +314,7 @@ class _DriverScreenState extends State<DriverScreen> {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: _kOcean),
+                    borderSide: const BorderSide(color: _kAccent),
                   ),
                 ),
               ),
@@ -334,10 +338,10 @@ class _DriverScreenState extends State<DriverScreen> {
                 style: const TextStyle(fontSize: 13),
               ),
               style: OutlinedButton.styleFrom(
-                foregroundColor: _filterDate != null ? _kOcean : _kMid,
+                foregroundColor: _filterDate != null ? _kAccent : _kMid,
                 side: BorderSide(
                   color: _filterDate != null
-                      ? _kOcean
+                      ? _kAccent
                       : const Color(0xFFE2E8F0),
                 ),
                 padding: const EdgeInsets.symmetric(
@@ -366,7 +370,7 @@ class _DriverScreenState extends State<DriverScreen> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _statusChip('All', 'all', _kOcean, _trips.length),
+              _statusChip('All', 'all', _kAccent, _trips.length),
               const SizedBox(width: 8),
               _statusChip(
                 'Upcoming',
@@ -378,7 +382,7 @@ class _DriverScreenState extends State<DriverScreen> {
               _statusChip(
                 'Completed',
                 'completed',
-                _kTeal,
+                _kGreen,
                 _countByStatus('completed'),
               ),
               const SizedBox(width: 8),
@@ -543,7 +547,7 @@ class _TripCardState extends State<_TripCard> {
         statusColor = const Color(0xFF50C878);
         statusLabel = 'IN PROGRESS';
       case 'completed':
-        statusColor = _kTeal;
+        statusColor = _kGreen;
         statusLabel = 'COMPLETED';
       case 'cancelled':
         statusColor = const Color(0xFFFF6B4A);
@@ -609,7 +613,7 @@ class _TripCardState extends State<_TripCard> {
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
-                        color: _kOcean,
+                        color: _kAccent,
                       ),
                     ),
                     const Spacer(),
@@ -642,7 +646,7 @@ class _TripCardState extends State<_TripCard> {
                         style: TextStyle(fontWeight: FontWeight.w700),
                       ),
                       style: FilledButton.styleFrom(
-                        backgroundColor: _kOcean,
+                        backgroundColor: _kAccent,
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -663,7 +667,7 @@ class _TripCardState extends State<_TripCard> {
                         _expanded ? 'Hide Details' : 'View Full Details',
                         style: const TextStyle(
                           fontSize: 12,
-                          color: _kOcean,
+                          color: _kAccent,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -673,7 +677,7 @@ class _TripCardState extends State<_TripCard> {
                             ? Icons.keyboard_arrow_up
                             : Icons.keyboard_arrow_down,
                         size: 16,
-                        color: _kOcean,
+                        color: _kAccent,
                       ),
                     ],
                   ),
@@ -708,7 +712,7 @@ class _TripCardState extends State<_TripCard> {
                             'Kids (4–17)',
                             '$kids',
                             badge: '70% price',
-                            badgeColor: _kTeal,
+                            badgeColor: _kGreen,
                           ),
                         if (toddlers > 0)
                           _detailRow(
@@ -813,7 +817,7 @@ class _TripCardState extends State<_TripCard> {
                                         vertical: 3,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: _kOcean,
+                                        color: _kAccent,
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Text(
@@ -905,14 +909,14 @@ class _TripCardState extends State<_TripCard> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(
-              color: (badgeColor ?? _kTeal).withValues(alpha: 0.12),
+              color: (badgeColor ?? _kGreen).withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(4),
             ),
             child: Text(
               badge,
               style: TextStyle(
                 fontSize: 10,
-                color: badgeColor ?? _kTeal,
+                color: badgeColor ?? _kGreen,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -1055,7 +1059,7 @@ class _QrScanDialogState extends State<_QrScanDialog> {
               padding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
               child: Row(
                 children: [
-                  const Icon(Icons.qr_code_scanner, color: _kOcean, size: 22),
+                  const Icon(Icons.qr_code_scanner, color: _kAccent, size: 22),
                   const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
@@ -1101,7 +1105,7 @@ class _QrScanDialogState extends State<_QrScanDialog> {
                               width: 220,
                               height: 220,
                               decoration: BoxDecoration(
-                                border: Border.all(color: _kOcean, width: 2),
+                                border: Border.all(color: _kAccent, width: 2),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),

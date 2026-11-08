@@ -1,9 +1,19 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../widgets/safe_image.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models.dart';
-import '../data/cebu_data.dart';
+import '../data/media_data.dart';
+import '../widgets/media_dialogs.dart';
+import '../widgets/home/hero_search_bar.dart';
+import '../widgets/home/home_destinations_rail.dart';
+import '../widgets/home/home_packages.dart';
+import '../widgets/home/home_regions.dart';
+import '../widgets/home/home_stats.dart';
+import '../widgets/home/home_story.dart';
+import '../widgets/home/home_videos.dart';
+import '../widgets/wm_ui.dart';
 import 'booking_screen.dart';
 import 'explore_screen.dart';
 import 'dashboard_screen.dart';
@@ -11,12 +21,13 @@ import 'admin_screen.dart';
 import 'auth_screen.dart';
 
 // ── Color palette ─────────────────────────────────────────────────────────────
-const _kOcean = Color(0xFF0EA5E9);
-const _kTeal  = Color(0xFF14B8A6);
+const _kAccent = Color(0xFFD96A2B);
 const _kGold  = Color(0xFFF59E0B);
 const _kDark  = Color(0xFF0F172A);
 const _kMid   = Color(0xFF64748B);
-const _kBg    = Color(0xFFF8FAFC);
+// Landing-page accent (warm sunset orange used for active nav + highlights)
+const _kSun   = Color(0xFFF0955A);
+const _kHeroBg = 'assets/images/home_bg.jpg';
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
 
@@ -57,12 +68,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final popular = cebuDestinations.take(3).toList();
     final mobile = _isMobile(context);
     final hPad = mobile ? 20.0 : 80.0;
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: Colors.white,
       body: Stack(
         children: [
           SingleChildScrollView(
@@ -70,49 +80,44 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               children: [
                 _HeroSection(visible: _heroVisible, mobile: mobile),
-                _StatsBar(mobile: mobile),
-                // ── Popular Destinations ──────────────────────────────────
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 60),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                            const Text('Popular Destinations',
-                                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _kDark)),
-                            const SizedBox(height: 6),
-                            const Text('Discover the most highly-rated island spots across Cebu.',
-                                style: TextStyle(fontSize: 14, color: _kMid)),
-                          ]),
-                          TextButton.icon(
-                            onPressed: () => Navigator.pushNamed(context, ExploreScreen.routeName),
-                            icon: const Icon(Icons.arrow_forward, size: 16, color: _kOcean),
-                            label: const Text('View all',
-                                style: TextStyle(color: _kOcean, fontWeight: FontWeight.w600)),
-                          ),
-                        ],
+                // Floating trip search + stats card, overlapping the hero's bottom edge
+                Transform.translate(
+                  offset: Offset(0, mobile ? -44 : -64),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: hPad),
+                    child: Column(children: [
+                      WmBlurIn(
+                        delay: const Duration(milliseconds: 300),
+                        child: Center(child: HeroSearchBar(compact: mobile)),
                       ),
-                      const SizedBox(height: 32),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: mobile ? 1 : 3,
-                          mainAxisSpacing: 24,
-                          crossAxisSpacing: 24,
-                          mainAxisExtent: mobile ? 130 : 355,
+                      SizedBox(height: mobile ? 20 : 28),
+                      WmBlurIn(
+                        delay: const Duration(milliseconds: 450),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1100),
+                          child: const HomeStatsCard(),
                         ),
-                        itemCount: popular.length,
-                        itemBuilder: (context, i) => _DestCard(spot: popular[i]),
                       ),
-                    ],
+                    ]),
                   ),
                 ),
-                _WhySection(mobile: mobile, hPad: hPad),
-                _TestimonialsSection(mobile: mobile, hPad: hPad),
+                // Pull the rest of the page up by the same amount the search/stats
+                // block overlaps the hero, so no empty band is left behind.
+                Transform.translate(
+                  offset: Offset(0, mobile ? -44 : -64),
+                  child: Column(children: [
+                    HomeRegionsSection(hPad: hPad),
+                    HomeDestinationsRail(hPad: hPad),
+                    HomePackagesSection(hPad: hPad),
+                    HomeVideosSection(hPad: hPad),
+                    HomeWhySection(hPad: hPad),
+                    HomeTestimonialsSection(hPad: hPad),
+                    Padding(
+                      padding: EdgeInsets.only(top: mobile ? 48 : 80, bottom: mobile ? 4 : 16),
+                      child: HomeCtaBanner(hPad: hPad),
+                    ),
+                  ]),
+                ),
                 const SpoonyFooter(),
               ],
             ),
@@ -181,28 +186,20 @@ class _StickyNavState extends State<_StickyNav> {
             ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 16, offset: const Offset(0, 2))]
             : [],
       ),
-      padding: EdgeInsets.symmetric(horizontal: mobile ? 20 : 80, vertical: 16),
+      padding: EdgeInsets.symmetric(horizontal: mobile ? 24 : 80, vertical: scrolled ? 14 : 28),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
             onTap: () => Navigator.pushReplacementNamed(context, HomeScreen.routeName),
-            child: Row(children: [
-              Container(
-                width: 32, height: 32,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_kOcean, _kTeal]),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.public, color: Colors.white, size: 18),
+            child: AnimatedDefaultTextStyle(
+              duration: const Duration(milliseconds: 250),
+              style: TextStyle(
+                fontSize: 18, fontWeight: FontWeight.w800,
+                letterSpacing: 1.5, color: textColor,
               ),
-              const SizedBox(width: 10),
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 250),
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800, color: textColor),
-                child: const Text('Spoony Travel'),
-              ),
-            ]),
+              child: const Text('SPOONY'),
+            ),
           ),
           if (mobile)
             IconButton(
@@ -217,43 +214,49 @@ class _StickyNavState extends State<_StickyNav> {
                   onTap: () => Navigator.pushNamed(context, ExploreScreen.routeName)),
               _NavLink(label: 'Bookings', textColor: textColor, active: false,
                   onTap: () => Navigator.pushNamed(context, BookingScreen.routeName)),
-              _NavLink(label: 'Dashboard', textColor: textColor, active: false,
+              if (_user != null)
+                _NavLink(label: 'Dashboard', textColor: textColor, active: false,
                   onTap: () => Navigator.pushNamed(context, DashboardScreen.routeName)),
               if (_isAdmin)
                 _NavLink(label: 'Admin', textColor: textColor, active: false,
                     onTap: () => Navigator.pushNamed(context, AdminScreen.routeName)),
-              const SizedBox(width: 20),
+              const SizedBox(width: 24),
               if (_user != null) ...[
                 CircleAvatar(
-                  radius: 16, backgroundColor: _kOcean,
+                  radius: 16, backgroundColor: _kSun,
                   child: Text(_initials(_user!),
                       style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
-                const SizedBox(width: 8),
-                FilledButton.icon(
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
                   onPressed: () async {
                     await Supabase.instance.client.auth.signOut();
-                    if (context.mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                    if (context.mounted) Navigator.pushReplacementNamed(context, HomeScreen.routeName);
                   },
                   icon: const Icon(Icons.logout, size: 15),
                   label: const Text('Sign Out'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFEF4444),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: textColor,
+                    side: BorderSide(color: textColor, width: 1.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: const StadiumBorder(),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.5),
                   ),
                 ),
               ] else
-                FilledButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, AuthScreen.routeName),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _kGold,
-                    foregroundColor: _kDark,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                OutlinedButton(
+                  onPressed: () => Navigator.pushNamed(context, AuthScreen.routeName),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: textColor,
+                    side: BorderSide(color: textColor, width: 1.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                    shape: const StadiumBorder(),
                   ),
-                  child: const Text('Sign In', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                  child: const Text('SIGN IN',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
                 ),
+              const SizedBox(width: 20),
+              Icon(Icons.apps_rounded, color: textColor.withValues(alpha: 0.75), size: 22),
             ]),
         ],
       ),
@@ -281,7 +284,7 @@ class _StickyNavState extends State<_StickyNav> {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   child: Row(children: [
                     CircleAvatar(
-                      radius: 20, backgroundColor: _kOcean,
+                      radius: 20, backgroundColor: _kAccent,
                       child: Text(_initials(_user!),
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
@@ -302,7 +305,8 @@ class _StickyNavState extends State<_StickyNav> {
                   onTap: () { Navigator.pop(context); Navigator.pushNamed(context, ExploreScreen.routeName); }),
               _MobileNavItem(label: 'Bookings', icon: Icons.book_outlined, active: false,
                   onTap: () { Navigator.pop(context); Navigator.pushNamed(context, BookingScreen.routeName); }),
-              _MobileNavItem(label: 'Dashboard', icon: Icons.dashboard_outlined, active: false,
+              if (_user != null)
+                _MobileNavItem(label: 'Dashboard', icon: Icons.dashboard_outlined, active: false,
                   onTap: () { Navigator.pop(context); Navigator.pushNamed(context, DashboardScreen.routeName); }),
               if (_isAdmin)
                 _MobileNavItem(label: 'Admin Panel', icon: Icons.admin_panel_settings_outlined, active: false,
@@ -317,7 +321,7 @@ class _StickyNavState extends State<_StickyNav> {
                           onPressed: () async {
                             Navigator.pop(context);
                             await Supabase.instance.client.auth.signOut();
-                            if (context.mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                            if (context.mounted) Navigator.pushReplacementNamed(context, HomeScreen.routeName);
                           },
                           icon: const Icon(Icons.logout, size: 16),
                           label: const Text('Sign Out'),
@@ -333,7 +337,7 @@ class _StickyNavState extends State<_StickyNav> {
                         child: FilledButton(
                           onPressed: () {
                             Navigator.pop(context);
-                            Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                            Navigator.pushNamed(context, AuthScreen.routeName);
                           },
                           style: FilledButton.styleFrom(
                             backgroundColor: _kGold,
@@ -376,13 +380,16 @@ class _NavLinkState extends State<_NavLink> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
           child: AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 150),
             style: TextStyle(
-              fontSize: 15,
-              fontWeight: widget.active || _hovered ? FontWeight.w700 : FontWeight.w500,
-              color: _hovered ? _kOcean : widget.textColor,
+              fontSize: 16,
+              letterSpacing: 0.3,
+              fontWeight: widget.active ? FontWeight.w600 : FontWeight.w400,
+              color: widget.active || _hovered
+                  ? _kSun
+                  : widget.textColor.withValues(alpha: 0.85),
             ),
             child: Text(widget.label),
           ),
@@ -392,111 +399,399 @@ class _NavLinkState extends State<_NavLink> {
   }
 }
 
-// ── Cinematic hero ────────────────────────────────────────────────────────────
+// ── Landing hero: 4K destination carousel ("Explore the World" style) ────────
 
-class _HeroSection extends StatelessWidget {
+class _HeroSection extends StatefulWidget {
   final bool visible;
   final bool mobile;
   const _HeroSection({required this.visible, required this.mobile});
 
   @override
-  Widget build(BuildContext context) {
-    final heroH = mobile ? 520.0 : 640.0;
-    final hPad = mobile ? 24.0 : 80.0;
+  State<_HeroSection> createState() => _HeroSectionState();
+}
 
-    return Stack(
-      children: [
-        SizedBox(
-          height: heroH,
-          width: double.infinity,
-          child: Image.network(
-            'https://upload.wikimedia.org/wikipedia/commons/0/00/Cebu-Cordova_Link_Expressway_%28CCLEX%29.jpg',
-            fit: BoxFit.cover,
-            errorBuilder: (_, _, _) => Container(color: _kOcean),
-          ),
-        ),
-        Container(
-          height: heroH,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                _kDark.withValues(alpha: 0.78),
-                _kOcean.withValues(alpha: 0.30),
-              ],
-              begin: Alignment.bottomLeft,
-              end: Alignment.topRight,
+class _HeroSectionState extends State<_HeroSection> {
+  static const _interval = Duration(seconds: 7);
+  int _index = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _restartTimer();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _precache(1);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _restartTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(_interval, (_) => _goTo(_index + 1, fromTimer: true));
+  }
+
+  /// Network slides are 3840px (4K). On smaller screens use the 1920px rendition,
+  /// and always decode at (screen width × DPR) so 4K bitmaps don't pile up in memory.
+  ImageProvider _provider(HeroSlide s) {
+    if (s.isAsset) return AssetImage(s.image);
+    final blurred = safeImageSource(s.image);
+    if (blurred.startsWith('assets/')) return AssetImage(blurred);
+    final mq = MediaQuery.of(context);
+    final targetW = (mq.size.width * mq.devicePixelRatio).round();
+    final url = targetW <= 1920 ? s.image.replaceFirst('/3840px-', '/1920px-') : s.image;
+    return ResizeImage(NetworkImage(url), width: targetW.clamp(800, 3840), allowUpscaling: false);
+  }
+
+  void _precache(int i) {
+    final s = heroSlides[i % heroSlides.length];
+    precacheImage(_provider(s), context, onError: (_, _) {});
+  }
+
+  void _goTo(int i, {bool fromTimer = false}) {
+    if (!mounted) return;
+    final n = heroSlides.length;
+    setState(() => _index = (i % n + n) % n);
+    _precache(_index + 1);
+    if (!fromTimer) _restartTimer();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mobile = widget.mobile;
+    final visible = widget.visible;
+    final screenH = MediaQuery.of(context).size.height;
+    final heroH = (mobile ? screenH * 0.92 : screenH).clamp(600.0, 980.0);
+    final hPad = mobile ? 24.0 : 110.0;
+    // Short phones get a smaller headline so the hero copy never overflows.
+    final titleSize = mobile ? (screenH < 760 ? 42.0 : 54.0) : (screenH < 760 ? 76.0 : 96.0);
+    final slide = heroSlides[_index];
+
+    return SizedBox(
+      height: heroH,
+      width: double.infinity,
+      child: Stack(
+        children: [
+          // Background carousel: cross-fade + slow Ken Burns zoom
+          Positioned.fill(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 1400),
+              switchInCurve: Curves.easeOut,
+              switchOutCurve: Curves.easeIn,
+              layoutBuilder: (current, previous) => Stack(
+                fit: StackFit.expand,
+                children: [...previous, ?current],
+              ),
+              child: _KenBurnsImage(key: ValueKey(_index), slide: slide, provider: _provider(slide)),
             ),
           ),
-        ),
-        SizedBox(
-          height: heroH,
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(hPad, mobile ? 90 : 100, hPad, 40),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AnimatedOpacity(
-                  opacity: visible ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 800),
+          // Scrims for legibility
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [Colors.black.withValues(alpha: 0.55), Colors.black.withValues(alpha: 0.05)],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: const [0, 0.22, 0.62, 1],
+                    colors: [
+                      Colors.black.withValues(alpha: 0.45),
+                      Colors.transparent,
+                      Colors.transparent,
+                      const Color(0xFF0F172A).withValues(alpha: 0.75),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Main copy
+          Positioned.fill(
+            child: Padding(
+              padding: EdgeInsets.only(top: mobile ? 76 : 96, bottom: mobile ? 130 : 140),
+              // Auto-fit: on short or narrow screens the whole headline block scales
+              // down to the space available instead of overflowing.
+              child: LayoutBuilder(
+                builder: (context, box) => FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: SizedBox(
+                    width: box.maxWidth,
+                    child: AnimatedOpacity(
+                opacity: visible ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 900),
+                child: AnimatedSlide(
+                  offset: visible ? Offset.zero : const Offset(0, 0.04),
+                  duration: const Duration(milliseconds: 900),
+                  curve: Curves.easeOutCubic,
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Padding(
+                        padding: EdgeInsets.only(left: hPad),
+                        child: Text('DISCOVER 50+ DESTINATIONS',
+                            style: TextStyle(
+                              color: _kSun,
+                              fontSize: mobile ? 12 : 14,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 3,
+                            )),
+                      ),
+                      SizedBox(height: mobile ? 10 : 14),
+                      Padding(
+                        padding: EdgeInsets.only(left: hPad, right: 24),
+                        child: Text.rich(
+                          TextSpan(children: [
+                            TextSpan(
+                              text: 'Explore\n',
+                              style: TextStyle(
+                                fontSize: titleSize, fontWeight: FontWeight.w700, height: 1.05, letterSpacing: -1,
+                              ),
+                            ),
+                            TextSpan(
+                              text: 'Cebu Island',
+                              style: TextStyle(
+                                fontSize: titleSize, fontWeight: FontWeight.w200, height: 1.1, letterSpacing: -0.5,
+                              ),
+                            ),
+                          ]),
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            shadows: [Shadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 24)],
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: mobile ? 22 : 32),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: _kGold.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: _kGold.withValues(alpha: 0.55)),
-                        ),
-                        child: const Text('✦  Premium Cebu Island Experience',
-                            style: TextStyle(color: _kGold, fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.6)),
+                        width: hPad + (mobile ? 180 : 340),
+                        height: 2,
+                        color: Colors.white.withValues(alpha: 0.9),
                       ),
-                      SizedBox(height: mobile ? 18 : 26),
-                      Text(
-                        'Discover the\nMagic of Cebu',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: mobile ? 38 : 58,
-                          fontWeight: FontWeight.w900,
-                          height: 1.12,
-                          letterSpacing: -0.5,
+                      SizedBox(height: mobile ? 22 : 32),
+                      Padding(
+                        padding: EdgeInsets.only(left: hPad, right: 24),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 520),
+                          child: const Text(
+                            'From the karst peaks of Osmeña to the turquoise pools of Kawasan Falls — '
+                            'plan, book, and track your Cebu adventure in one place.',
+                            style: TextStyle(color: Colors.white, fontSize: 15, height: 1.6, letterSpacing: 0.6),
+                          ),
                         ),
                       ),
-                      if (!mobile) ...[
-                        const SizedBox(height: 18),
-                        const SizedBox(
-                          width: 520,
-                          child: Text(
-                            'From the deep blue of Kawasan Falls to the peaks of Osmeña, book your dream itinerary with real-time distance tracking.',
-                            style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.7),
-                          ),
+                      SizedBox(height: mobile ? 28 : 44),
+                      Padding(
+                        padding: EdgeInsets.only(left: hPad, right: 24),
+                        child: Wrap(
+                          spacing: 14,
+                          runSpacing: 12,
+                          children: [
+                            _HeroCta(
+                              label: 'EXPLORE',
+                              primary: false,
+                              onTap: () => Navigator.pushNamed(context, ExploreScreen.routeName),
+                            ),
+                            _HeroCta(
+                              label: 'BOOK A TRIP',
+                              primary: true,
+                              onTap: () => Navigator.pushNamed(context, BookingScreen.routeName),
+                            ),
+                          ],
                         ),
-                      ],
-                      SizedBox(height: mobile ? 28 : 40),
-                      Wrap(
-                        spacing: 14,
-                        runSpacing: 12,
-                        children: [
-                          _HeroCta(
-                            label: 'Explore Destinations',
-                            icon: Icons.explore_rounded,
-                            primary: true,
-                            onTap: () => Navigator.pushNamed(context, ExploreScreen.routeName),
-                          ),
-                          _HeroCta(
-                            label: 'Plan Itinerary',
-                            icon: Icons.calendar_month_rounded,
-                            primary: false,
-                            onTap: () => Navigator.pushNamed(context, BookingScreen.routeName),
-                          ),
-                        ],
                       ),
                     ],
                   ),
                 ),
+              ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // Right-side vertical rail with working social / media buttons
+          if (!mobile)
+            Positioned(
+              right: 48,
+              top: heroH * 0.2,
+              bottom: heroH * 0.2,
+              child: Column(
+                children: [
+                  Expanded(child: Container(width: 1.5, color: Colors.white.withValues(alpha: 0.8))),
+                  const SizedBox(height: 14),
+                  const _SocialButtons(axis: Axis.vertical),
+                  const SizedBox(height: 14),
+                  Expanded(child: Container(width: 1.5, color: Colors.white.withValues(alpha: 0.8))),
+                ],
+              ),
+            ),
+
+          // Bottom bar: current destination · dots · arrows
+          Positioned(
+            left: hPad,
+            right: mobile ? 24 : 110,
+            bottom: mobile ? 66 : 84,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 500),
+                    switchInCurve: const Interval(0.4, 1, curve: Curves.easeOut),
+                    switchOutCurve: const Interval(0.6, 1, curve: Curves.easeIn),
+                    layoutBuilder: (current, previous) => Stack(
+                      alignment: Alignment.bottomLeft,
+                      children: [...previous, ?current],
+                    ),
+                    child: _SlideCaption(
+                      key: ValueKey(_index),
+                      slide: slide,
+                      number: _index + 1,
+                      total: heroSlides.length,
+                    ),
+                  ),
+                ),
+                if (!mobile) ...[
+                  _Dots(count: heroSlides.length, index: _index, onTap: _goTo),
+                  const SizedBox(width: 28),
+                ],
+                _ArrowBtn(icon: Icons.arrow_back_rounded, tooltip: 'Previous', onTap: () => _goTo(_index - 1)),
+                const SizedBox(width: 10),
+                _ArrowBtn(icon: Icons.arrow_forward_rounded, tooltip: 'Next', onTap: () => _goTo(_index + 1)),
               ],
             ),
+          ),
+          // Progress bar for the current slide
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: TweenAnimationBuilder<double>(
+              key: ValueKey('p$_index'),
+              tween: Tween(begin: 0, end: 1),
+              duration: _interval,
+              builder: (_, v, _) => Align(
+                alignment: Alignment.centerLeft,
+                child: FractionallySizedBox(
+                  widthFactor: v,
+                  child: Container(height: 3, color: _kSun),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A slide image that slowly zooms in while it is on screen.
+class _KenBurnsImage extends StatelessWidget {
+  final HeroSlide slide;
+  final ImageProvider provider;
+  const _KenBurnsImage({super.key, required this.slide, required this.provider});
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 1.0, end: 1.09),
+      duration: const Duration(seconds: 9),
+      curve: Curves.easeOut,
+      builder: (_, scale, child) => Transform.scale(scale: scale, child: child),
+      child: Image(
+        image: provider,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        gaplessPlayback: true,
+        frameBuilder: (_, child, frame, sync) => sync
+            ? child
+            : AnimatedOpacity(
+                opacity: frame == null ? 0 : 1,
+                duration: const Duration(milliseconds: 600),
+                child: child,
+              ),
+        errorBuilder: (_, _, _) => Image.asset(_kHeroBg, fit: BoxFit.cover),
+      ),
+    );
+  }
+}
+
+String _slideCredit(HeroSlide slide) {
+  if (slide.isAsset) return 'Photo: Spoony Travel and Tours';
+  final c = creditForUrl(slide.image);
+  if (c == null) return '';
+  return '© ${c.author} · ${c.license}${c.modified ? ' · edited' : ''}';
+}
+
+class _SlideCaption extends StatelessWidget {
+  final HeroSlide slide;
+  final int number;
+  final int total;
+  const _SlideCaption({super.key, required this.slide, required this.number, required this.total});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(number.toString().padLeft(2, '0'),
+            style: const TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.w200, height: 1)),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, right: 14, bottom: 3),
+          child: Text('/ ${total.toString().padLeft(2, '0')}',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12)),
+        ),
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(slide.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.location_on, size: 12, color: _kSun),
+                const SizedBox(width: 3),
+                Flexible(
+                  child: Text(slide.location,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 12)),
+                ),
+              ]),
+              const SizedBox(height: 3),
+              Text(
+                _slideCredit(slide),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 10),
+              ),
+            ],
           ),
         ),
       ],
@@ -504,12 +799,158 @@ class _HeroSection extends StatelessWidget {
   }
 }
 
+class _Dots extends StatelessWidget {
+  final int count;
+  final int index;
+  final void Function(int) onTap;
+  const _Dots({required this.count, required this.index, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(count, (i) {
+        final active = i == index;
+        return MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            onTap: () => onTap(i),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 8),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: active ? 22 : 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: active ? _kSun : Colors.white.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _ArrowBtn extends StatefulWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  const _ArrowBtn({required this.icon, required this.tooltip, required this.onTap});
+
+  @override
+  State<_ArrowBtn> createState() => _ArrowBtnState();
+}
+
+class _ArrowBtnState extends State<_ArrowBtn> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: widget.tooltip,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: _hover ? Colors.white : Colors.white.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.5),
+            ),
+            child: Icon(widget.icon, size: 20, color: _hover ? _kDark : Colors.white),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Facebook → Spoony's page, Pictures → in-app gallery, Videos → travel videos.
+class _SocialButtons extends StatelessWidget {
+  final Axis axis;
+  const _SocialButtons({required this.axis});
+
+  @override
+  Widget build(BuildContext context) {
+    final buttons = [
+      _RailButton(
+        icon: Icons.facebook,
+        tooltip: 'Facebook',
+        onTap: () => openExternal(context, kFacebookPageUrl),
+      ),
+      _RailButton(
+        icon: Icons.photo_library_outlined,
+        tooltip: 'Pictures',
+        onTap: () => showPhotoGallery(context),
+      ),
+      _RailButton(
+        icon: Icons.play_circle_outline,
+        tooltip: 'Videos',
+        onTap: () => showVideos(context),
+      ),
+    ];
+    return axis == Axis.vertical
+        ? Column(mainAxisSize: MainAxisSize.min, children: buttons)
+        : Row(mainAxisSize: MainAxisSize.min, children: buttons);
+  }
+}
+
+class _RailButton extends StatefulWidget {
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onTap;
+  const _RailButton({required this.icon, required this.tooltip, required this.onTap});
+
+  @override
+  State<_RailButton> createState() => _RailButtonState();
+}
+
+class _RailButtonState extends State<_RailButton> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: widget.tooltip,
+      preferBelow: false,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            margin: const EdgeInsets.all(4),
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: _hover ? _kSun : Colors.black.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(color: _hover ? _kSun : Colors.white.withValues(alpha: 0.5)),
+            ),
+            child: Icon(widget.icon, color: Colors.white, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HeroCta extends StatefulWidget {
   final String label;
-  final IconData icon;
   final bool primary;
   final VoidCallback onTap;
-  const _HeroCta({required this.label, required this.icon, required this.primary, required this.onTap});
+  const _HeroCta({required this.label, required this.primary, required this.onTap});
 
   @override
   State<_HeroCta> createState() => _HeroCtaState();
@@ -520,469 +961,37 @@ class _HeroCtaState extends State<_HeroCta> {
 
   @override
   Widget build(BuildContext context) {
+    final filled = widget.primary || _hovered;
     return MouseRegion(
+      cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _hovered = true),
       onExit: (_) => setState(() => _hovered = false),
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          transform: Matrix4.translationValues(0, _hovered ? -2 : 0, 0),
-          padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 15),
+          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
           decoration: BoxDecoration(
-            color: widget.primary
-                ? (_hovered ? _kGold : _kOcean)
-                : Colors.white.withValues(alpha: _hovered ? 0.22 : 0.12),
+            color: filled
+                ? (widget.primary ? (_hovered ? Colors.white : _kSun) : Colors.white)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(50),
-            border: widget.primary ? null : Border.all(color: Colors.white70, width: 1.5),
-            boxShadow: widget.primary && _hovered
-                ? [BoxShadow(color: _kOcean.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))]
-                : [],
+            border: Border.all(
+              color: widget.primary && !_hovered ? _kSun : Colors.white,
+              width: 2,
+            ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(widget.icon, color: Colors.white, size: 16),
-              const SizedBox(width: 8),
-              Text(widget.label,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 14)),
-            ],
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              color: filled && (_hovered || !widget.primary) ? _kDark : Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              letterSpacing: 0.8,
+            ),
           ),
         ),
       ),
-    );
-  }
-}
-
-// ── Stats bar ─────────────────────────────────────────────────────────────────
-
-class _StatsBar extends StatelessWidget {
-  final bool mobile;
-  const _StatsBar({required this.mobile});
-
-  static const _stats = [
-    ('50+', 'Destinations'),
-    ('1,200+', 'Happy Travelers'),
-    ('4.9★', 'Average Rating'),
-    ('24/7', 'Support'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: _kDark,
-      padding: EdgeInsets.symmetric(vertical: 22, horizontal: mobile ? 20 : 80),
-      child: mobile
-          ? GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 3.5,
-              children: _stats.map((s) => _StatItem(value: s.$1, label: s.$2)).toList(),
-            )
-          : Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: _stats.map((s) => _StatItem(value: s.$1, label: s.$2)).toList(),
-            ),
-    );
-  }
-}
-
-class _StatItem extends StatelessWidget {
-  final String value;
-  final String label;
-  const _StatItem({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(value, style: const TextStyle(color: _kGold, fontSize: 22, fontWeight: FontWeight.w900)),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
-      ],
-    );
-  }
-}
-
-// ── Destination card with hover lift ─────────────────────────────────────────
-
-class _DestCard extends StatefulWidget {
-  final Destination spot;
-  const _DestCard({required this.spot});
-
-  @override
-  State<_DestCard> createState() => _DestCardState();
-}
-
-class _DestCardState extends State<_DestCard> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final spot = widget.spot;
-    final mobile = _isMobile(context);
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: () => Navigator.pushNamed(context, BookingScreen.routeName),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          transform: Matrix4.translationValues(0, _hovered ? -6 : 0, 0),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withValues(alpha: _hovered ? 0.92 : 0.80),
-                Colors.white.withValues(alpha: _hovered ? 0.65 : 0.50),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: _hovered ? 0.10 : 0.05),
-                blurRadius: _hovered ? 28 : 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: mobile
-              ? Row(children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
-                    child: Image.network(
-                      spot.images.first,
-                      height: 100, width: 120, fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                          height: 100, width: 120, color: const Color(0xFFE0F7FA),
-                          child: const Icon(Icons.image, color: _kOcean)),
-                    ),
-                  ),
-                  Expanded(child: Padding(
-                    padding: const EdgeInsets.all(14),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(spot.name,
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 4),
-                      Text(regionTitle(spot.region),
-                          style: const TextStyle(fontSize: 11, color: _kMid)),
-                      const SizedBox(height: 6),
-                      Row(children: [
-                        const Icon(Icons.star, size: 12, color: _kGold),
-                        const SizedBox(width: 3),
-                        Text('${spot.rating}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: _kDark)),
-                        const Spacer(),
-                        Text('₱${spot.entranceFee.toInt()}',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kTeal)),
-                      ]),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: () => Navigator.pushNamed(context, BookingScreen.routeName),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: _kOcean,
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            minimumSize: const Size(0, 0),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                          child: const Text('Book Now', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-                        ),
-                      ),
-                    ]),
-                  )),
-                ])
-              : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                    child: Stack(children: [
-                      Image.network(
-                        spot.images.first,
-                        height: 180, width: double.infinity, fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => Container(
-                            height: 180, color: const Color(0xFFE0F7FA),
-                            child: const Icon(Icons.image, color: _kOcean, size: 40)),
-                      ),
-                      Positioned(
-                        top: 10, left: 10,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: _kOcean,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Text(regionTitle(spot.region),
-                              style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
-                        ),
-                      ),
-                    ]),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(spot.name,
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: _kDark),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 4),
-                      Row(children: [
-                        const Icon(Icons.location_on, size: 12, color: _kMid),
-                        const SizedBox(width: 3),
-                        Expanded(child: Text(spot.description,
-                            style: const TextStyle(fontSize: 11, color: _kMid),
-                            maxLines: 1, overflow: TextOverflow.ellipsis)),
-                      ]),
-                      const SizedBox(height: 10),
-                      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                        Row(children: [
-                          const Icon(Icons.star, size: 14, color: _kGold),
-                          const SizedBox(width: 4),
-                          Text('${spot.rating}',
-                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark)),
-                        ]),
-                        Text('₱${spot.entranceFee.toInt()}',
-                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kTeal)),
-                      ]),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        width: double.infinity,
-                        child: FilledButton(
-                          onPressed: () => Navigator.pushNamed(context, BookingScreen.routeName),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: _kOcean,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          ),
-                          child: const Text('Book Now', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
-                        ),
-                      ),
-                    ]),
-                  ),
-                ]),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Why choose section ────────────────────────────────────────────────────────
-
-class _WhySection extends StatelessWidget {
-  final bool mobile;
-  final double hPad;
-  const _WhySection({required this.mobile, required this.hPad});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 60),
-      child: Column(
-        children: [
-          const Text('Why Choose Spoony?',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _kDark),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-          const Text(
-            'The smartest way to explore Cebu — curated spots, real-time booking, and premium support.',
-            style: TextStyle(fontSize: 14, color: _kMid, height: 1.6),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 40),
-          mobile
-              ? const Column(children: [
-                  _FeatureTile(icon: Icons.route_rounded, color: _kOcean, title: 'Smart Itinerary', desc: 'Optimized routes, distances, and schedules for your Cebu adventure.'),
-                  SizedBox(height: 16),
-                  _FeatureTile(icon: Icons.shield_rounded, color: _kTeal, title: 'Secure Booking', desc: 'Verified partners, transparent pricing, and 24/7 dedicated support.'),
-                  SizedBox(height: 16),
-                  _FeatureTile(icon: Icons.eco_rounded, color: _kGold, title: 'Local Experiences', desc: 'Handpicked hidden gems and exclusive tours across all of Cebu.'),
-                ])
-              : const IntrinsicHeight(
-                  child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    Expanded(child: _FeatureTile(icon: Icons.route_rounded, color: _kOcean, title: 'Smart Itinerary', desc: 'Optimized routes, distances, and schedules for your Cebu adventure.')),
-                    SizedBox(width: 20),
-                    Expanded(child: _FeatureTile(icon: Icons.shield_rounded, color: _kTeal, title: 'Secure Booking', desc: 'Verified partners, transparent pricing, and 24/7 dedicated support.')),
-                    SizedBox(width: 20),
-                    Expanded(child: _FeatureTile(icon: Icons.eco_rounded, color: _kGold, title: 'Local Experiences', desc: 'Handpicked hidden gems and exclusive tours across all of Cebu.')),
-                  ]),
-                ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FeatureTile extends StatefulWidget {
-  final IconData icon;
-  final Color color;
-  final String title;
-  final String desc;
-  const _FeatureTile({required this.icon, required this.color, required this.title, required this.desc});
-
-  @override
-  State<_FeatureTile> createState() => _FeatureTileState();
-}
-
-class _FeatureTileState extends State<_FeatureTile> {
-  bool _hovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        transform: Matrix4.translationValues(0, _hovered ? -4 : 0, 0),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withValues(alpha: _hovered ? 0.90 : 0.78),
-              Colors.white.withValues(alpha: _hovered ? 0.65 : 0.48),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _hovered ? widget.color.withValues(alpha: 0.45) : Colors.white.withValues(alpha: 0.8),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: _hovered ? widget.color.withValues(alpha: 0.10) : Colors.black.withValues(alpha: 0.04),
-              blurRadius: _hovered ? 20 : 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 48, height: 48,
-            decoration: BoxDecoration(
-              color: widget.color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(widget.icon, color: widget.color, size: 24),
-          ),
-          const SizedBox(width: 16),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(widget.title,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark)),
-            const SizedBox(height: 4),
-            Text(widget.desc,
-                style: const TextStyle(fontSize: 12, color: _kMid, height: 1.5)),
-          ])),
-        ]),
-      ),
-    );
-  }
-}
-
-// ── Testimonials section ──────────────────────────────────────────────────────
-
-class _TestimonialsSection extends StatelessWidget {
-  final bool mobile;
-  final double hPad;
-  const _TestimonialsSection({required this.mobile, required this.hPad});
-
-  static const _reviews = [
-    ('Maria Santos', 'Cebu City', 4.9, 'Spoony made our Cebu trip absolutely perfect! The booking was seamless and the destinations they suggested were hidden gems we never would have found on our own.'),
-    ('John Reyes', 'Manila', 5.0, 'Best travel platform for Cebu! The real-time itinerary planner saved us hours of planning. Kawasan Falls was breathtaking — everything was organized perfectly.'),
-    ('Ana Villanueva', 'Davao', 4.8, 'Wonderful experience! The team at Spoony was so helpful and responsive. Booked Osmeña Peak and Sardine Run in one go — it was incredible!'),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: _kBg,
-      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 60),
-      child: Column(
-        children: [
-          const Text('What Travelers Say',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, color: _kDark),
-              textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-          const Text('Real reviews from people who explored Cebu with Spoony.',
-              style: TextStyle(fontSize: 14, color: _kMid), textAlign: TextAlign.center),
-          const SizedBox(height: 40),
-          if (mobile)
-            Column(children: _reviews
-                .map((r) => Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: _ReviewCard(name: r.$1, location: r.$2, rating: r.$3, review: r.$4),
-                    ))
-                .toList())
-          else
-            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Expanded(child: _ReviewCard(name: _reviews[0].$1, location: _reviews[0].$2, rating: _reviews[0].$3, review: _reviews[0].$4)),
-              const SizedBox(width: 20),
-              Expanded(child: _ReviewCard(name: _reviews[1].$1, location: _reviews[1].$2, rating: _reviews[1].$3, review: _reviews[1].$4)),
-              const SizedBox(width: 20),
-              Expanded(child: _ReviewCard(name: _reviews[2].$1, location: _reviews[2].$2, rating: _reviews[2].$3, review: _reviews[2].$4)),
-            ]),
-        ],
-      ),
-    );
-  }
-}
-
-class _ReviewCard extends StatelessWidget {
-  final String name;
-  final String location;
-  final double rating;
-  final String review;
-  const _ReviewCard({required this.name, required this.location, required this.rating, required this.review});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xCCFFFFFF), Color(0x80FFFFFF)],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.85), width: 1.5),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 14, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          for (int i = 0; i < 5; i++)
-            Icon(Icons.star, size: 14,
-                color: i < rating.round() ? _kGold : const Color(0xFFE2E8F0)),
-          const SizedBox(width: 6),
-          Text(rating.toString(),
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kDark)),
-        ]),
-        const SizedBox(height: 14),
-        Text('"$review"',
-            style: const TextStyle(fontSize: 13, color: _kMid, height: 1.6)),
-        const SizedBox(height: 20),
-        Row(children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: _kOcean.withValues(alpha: 0.12),
-            child: Text(name[0],
-                style: const TextStyle(color: _kOcean, fontWeight: FontWeight.bold, fontSize: 14)),
-          ),
-          const SizedBox(width: 10),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _kDark)),
-            Text(location, style: const TextStyle(fontSize: 11, color: _kMid)),
-          ]),
-        ]),
-      ]),
     );
   }
 }
@@ -991,7 +1000,13 @@ class _ReviewCard extends StatelessWidget {
 
 class SpoonyNavBar extends StatefulWidget {
   final String current;
-  const SpoonyNavBar({super.key, required this.current});
+
+  /// Optional page banner under the nav, styled like the home hero:
+  /// bold [title] + light [subtitle] on the mountain photo, with a thin rule.
+  final String? title;
+  final String? subtitle;
+  final String? tagline;
+  const SpoonyNavBar({super.key, required this.current, this.title, this.subtitle, this.tagline});
 
   @override
   State<SpoonyNavBar> createState() => _SpoonyNavBarState();
@@ -1063,7 +1078,7 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   child: Row(children: [
                     CircleAvatar(
-                      radius: 20, backgroundColor: _kOcean,
+                      radius: 20, backgroundColor: _kAccent,
                       child: Text(_initials(_user!),
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
@@ -1087,7 +1102,8 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
               _MobileNavItem(label: 'Bookings', icon: Icons.book_outlined,
                   active: widget.current == 'booking',
                   onTap: () { Navigator.pop(context); Navigator.pushReplacementNamed(context, BookingScreen.routeName); }),
-              _MobileNavItem(label: 'Dashboard', icon: Icons.dashboard_outlined,
+              if (_user != null)
+                _MobileNavItem(label: 'Dashboard', icon: Icons.dashboard_outlined,
                   active: widget.current == 'dashboard',
                   onTap: () { Navigator.pop(context); Navigator.pushReplacementNamed(context, DashboardScreen.routeName); }),
               if (_isAdmin)
@@ -1108,7 +1124,7 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
                           onPressed: () async {
                             Navigator.pop(context);
                             await Supabase.instance.client.auth.signOut();
-                            if (context.mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                            if (context.mounted) Navigator.pushReplacementNamed(context, HomeScreen.routeName);
                           },
                           icon: const Icon(Icons.logout, size: 16),
                           label: const Text('Sign Out'),
@@ -1124,10 +1140,10 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
                         child: FilledButton(
                           onPressed: () {
                             Navigator.pop(context);
-                            Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                            Navigator.pushNamed(context, AuthScreen.routeName);
                           },
                           style: FilledButton.styleFrom(
-                            backgroundColor: _kOcean,
+                            backgroundColor: _kAccent,
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -1146,34 +1162,98 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
   @override
   Widget build(BuildContext context) {
     final mobile = _isMobile(context);
+    final hPad = mobile ? 20.0 : 80.0;
+    final hasBanner = widget.title != null;
+
+    // Same mountain-sunset photo as the home hero, cropped to the sky band.
     return Container(
-      color: Colors.white,
-      padding: EdgeInsets.symmetric(horizontal: mobile ? 20 : 80, vertical: 14),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
+        color: _kDark,
+        image: DecorationImage(
+          image: AssetImage(_kHeroBg),
+          fit: BoxFit.cover,
+          alignment: Alignment(0, -0.3),
+        ),
       ),
-      child: Row(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              Colors.black.withValues(alpha: hasBanner ? 0.55 : 0.50),
+              Colors.black.withValues(alpha: hasBanner ? 0.15 : 0.25),
+            ],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: hPad, vertical: mobile ? 12 : 18),
+              child: _navRow(context, mobile),
+            ),
+            if (hasBanner) _banner(mobile, hPad),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _banner(bool mobile, double hPad) {
+    final size = mobile ? 38.0 : 58.0;
+    return Padding(
+      padding: EdgeInsets.only(top: mobile ? 12 : 24, bottom: mobile ? 28 : 44),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(left: hPad, right: hPad),
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(
+                  text: widget.title,
+                  style: TextStyle(fontSize: size, fontWeight: FontWeight.w700, letterSpacing: -0.5),
+                ),
+                if (widget.subtitle != null)
+                  TextSpan(
+                    text: ' ${widget.subtitle}',
+                    style: TextStyle(fontSize: size, fontWeight: FontWeight.w200),
+                  ),
+              ]),
+              style: const TextStyle(color: Colors.white, height: 1.1),
+            ),
+          ),
+          SizedBox(height: mobile ? 14 : 20),
+          Container(width: hPad + (mobile ? 140 : 260), height: 2, color: Colors.white.withValues(alpha: 0.9)),
+          if (widget.tagline != null) ...[
+            SizedBox(height: mobile ? 14 : 20),
+            Padding(
+              padding: EdgeInsets.only(left: hPad, right: hPad),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Text(widget.tagline!,
+                    style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.6, letterSpacing: 0.4)),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _navRow(BuildContext context, bool mobile) {
+    return Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
             onTap: () => Navigator.pushReplacementNamed(context, HomeScreen.routeName),
-            child: Row(children: [
-              Container(
-                width: 32, height: 32,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [_kOcean, _kTeal]),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.public, color: Colors.white, size: 18),
-              ),
-              const SizedBox(width: 10),
-              const Text('Spoony Travel',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: _kDark)),
-            ]),
+            child: const Text('SPOONY',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: 1.5, color: Colors.white)),
           ),
           if (mobile)
             IconButton(
-              icon: const Icon(Icons.menu, color: _kDark, size: 28),
+              icon: const Icon(Icons.menu, color: Colors.white, size: 28),
               onPressed: () => _showMobileMenu(context),
             )
           else
@@ -1184,7 +1264,8 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
                   onTap: () => Navigator.pushReplacementNamed(context, ExploreScreen.routeName)),
               _NavBtn(label: 'Bookings', active: widget.current == 'booking',
                   onTap: () => Navigator.pushReplacementNamed(context, BookingScreen.routeName)),
-              _NavBtn(label: 'Dashboard', active: widget.current == 'dashboard',
+              if (_user != null)
+                _NavBtn(label: 'Dashboard', active: widget.current == 'dashboard',
                   onTap: () => Navigator.pushReplacementNamed(context, DashboardScreen.routeName)),
               if (_isAdmin)
                 _NavBtn(label: 'Admin', active: widget.current == 'admin',
@@ -1195,38 +1276,41 @@ class _SpoonyNavBarState extends State<SpoonyNavBar> {
               const SizedBox(width: 20),
               if (_user != null) ...[
                 CircleAvatar(
-                  radius: 16, backgroundColor: _kOcean,
+                  radius: 16, backgroundColor: _kSun,
                   child: Text(_initials(_user!),
                       style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                 ),
-                const SizedBox(width: 8),
-                FilledButton.icon(
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
                   onPressed: () async {
                     await Supabase.instance.client.auth.signOut();
-                    if (context.mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                    if (context.mounted) Navigator.pushReplacementNamed(context, HomeScreen.routeName);
                   },
                   icon: const Icon(Icons.logout, size: 15),
                   label: const Text('Sign Out'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFEF4444),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white, width: 1.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    shape: const StadiumBorder(),
+                    textStyle: const TextStyle(fontWeight: FontWeight.w700, letterSpacing: 0.5),
                   ),
                 ),
               ] else
-                FilledButton(
-                  onPressed: () => Navigator.pushReplacementNamed(context, AuthScreen.routeName),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _kOcean,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                OutlinedButton(
+                  onPressed: () => Navigator.pushNamed(context, AuthScreen.routeName),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.white, width: 1.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                    shape: const StadiumBorder(),
                   ),
-                  child: const Text('Sign In', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                  child: const Text('SIGN IN',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, letterSpacing: 0.8)),
                 ),
             ]),
         ],
-      ),
-    );
+      );
   }
 }
 
@@ -1347,7 +1431,7 @@ class _ContactRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(children: [
-      Icon(icon, size: 18, color: _kOcean),
+      Icon(icon, size: 18, color: _kAccent),
       const SizedBox(width: 10),
       Flexible(child: Text(text, style: const TextStyle(fontSize: 14, color: _kDark))),
     ]);
@@ -1423,81 +1507,148 @@ class SpoonyFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     final mobile = _isMobile(context);
     final hPad = mobile ? 20.0 : 80.0;
+    void explore(BuildContext c) => Navigator.pushNamed(c, ExploreScreen.routeName);
 
-    return Column(
-      children: [
-        Container(
-          color: _kDark,
-          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: mobile ? 24 : 44),
-          child: mobile
-              ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const _FooterBrand(),
-                  const SizedBox(height: 20),
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const Expanded(child: _FooterLinks(title: 'Destinations', links: [
-                      ('Cebu City', null), ('South Cebu', null), ('North Cebu', null), ('Bohol', null),
-                    ])),
-                    Expanded(child: _FooterLinks(title: 'Support', links: [
-                      ('Contact Us', _showContactUs),
-                      ('FAQs', _showFAQs),
-                      ('Privacy Policy', _showPrivacyPolicy),
-                      ('Terms', _showTerms),
-                    ])),
+    final columns = [
+      _FooterLinks(title: 'Explore', links: [
+        ('Cebu City', explore),
+        ('South Cebu', explore),
+        ('North Cebu', explore),
+        ('Bohol day trips', explore),
+      ]),
+      _FooterLinks(title: 'Travel', links: [
+        ('Book a trip', (c) => Navigator.pushNamed(c, BookingScreen.routeName)),
+        ('Photo gallery', showPhotoGallery),
+        ('Travel videos', showVideos),
+        ('My trips', (c) => Navigator.pushNamed(c, DashboardScreen.routeName)),
+      ]),
+      _FooterLinks(title: 'Support', links: [
+        ('Contact us', _showContactUs),
+        ('FAQs', _showFAQs),
+        ('Privacy policy', _showPrivacyPolicy),
+        ('Terms of service', _showTerms),
+        ('Photo credits', showPhotoCredits),
+      ]),
+    ];
+
+    return Container(
+      color: _kDark,
+      child: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(hPad, mobile ? 40 : 72, hPad, mobile ? 28 : 48),
+            child: mobile
+                ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const _FooterBrand(),
+                    const SizedBox(height: 32),
+                    Wrap(spacing: 40, runSpacing: 28, children: columns),
+                  ])
+                : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Expanded(flex: 5, child: _FooterBrand()),
+                    const SizedBox(width: 48),
+                    for (final c in columns) Expanded(flex: 2, child: c),
                   ]),
-                ])
-              : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Expanded(flex: 2, child: _FooterBrand()),
-                  const Expanded(child: _FooterLinks(title: 'Destinations', links: [
-                    ('Cebu City', null), ('South Cebu', null), ('North Cebu', null), ('Bohol', null),
-                  ])),
-                  Expanded(child: _FooterLinks(title: 'Support', links: [
-                    ('Contact Us', _showContactUs),
-                    ('FAQs', _showFAQs),
-                    ('Privacy Policy', _showPrivacyPolicy),
-                    ('Terms of Service', _showTerms),
-                  ])),
-                ]),
-        ),
-        Container(
-          color: Colors.black,
-          padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 16),
-          child: Center(
-            child: Text('© 2026 Spoony Travel and Tours. All rights reserved.',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 12)),
           ),
-        ),
-      ],
+          Container(height: 1, color: Colors.white.withValues(alpha: 0.08), margin: EdgeInsets.symmetric(horizontal: hPad)),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: hPad, vertical: 20),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 16,
+              runSpacing: 8,
+              children: [
+                Text('© 2026 Spoony Travel and Tours. All rights reserved.',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.45), fontSize: 12)),
+                Text('Photos & videos: Wikimedia Commons contributors (CC BY / CC BY-SA / CC0)',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.35), fontSize: 11)),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _FooterBrand extends StatelessWidget {
+class _FooterBrand extends StatefulWidget {
   const _FooterBrand();
+
+  @override
+  State<_FooterBrand> createState() => _FooterBrandState();
+}
+
+class _FooterBrandState extends State<_FooterBrand> {
+  final _email = TextEditingController();
+
+  @override
+  void dispose() {
+    _email.dispose();
+    super.dispose();
+  }
+
+  void _subscribe() {
+    final v = _email.text.trim();
+    final ok = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(ok ? 'Thanks! Travel deals are on their way to $v.' : 'Please enter a valid email address.'),
+    ));
+    if (ok) _email.clear();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        Container(
-          width: 32, height: 32,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [_kOcean, _kTeal]),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(Icons.public, color: Colors.white, size: 18),
-        ),
-        const SizedBox(width: 10),
-        const Text('Spoony Travel',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)),
-      ]),
-      const SizedBox(height: 16),
+      Text('SPOONY',
+          style: GoogleFonts.poppins(
+              fontSize: 30, fontWeight: FontWeight.w800, letterSpacing: 3, color: Colors.white)),
+      const SizedBox(height: 10),
       const SizedBox(
-        width: 240,
+        width: 360,
         child: Text(
-          'Your premium gateway to the most beautiful destinations in Cebu, Philippines.',
-          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.6),
+          'Curated trips, real-time booking and local know-how for the most beautiful corners of Cebu.',
+          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14, height: 1.6),
         ),
       ),
+      const SizedBox(height: 24),
+      const Text('Get travel deals in your inbox',
+          style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 10),
+      ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 420),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(18, 4, 4, 4),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+          ),
+          child: Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _email,
+                onSubmitted: (_) => _subscribe(),
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                cursorColor: _kSun,
+                decoration: InputDecoration(
+                  isDense: true,
+                  border: InputBorder.none,
+                  hintText: 'you@email.com',
+                  hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.35)),
+                ),
+              ),
+            ),
+            WmShimmerButton(
+              label: 'Subscribe',
+              onTap: _subscribe,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+              fontSize: 13,
+            ),
+          ]),
+        ),
+      ),
+      const SizedBox(height: 24),
+      const _SocialButtons(axis: Axis.horizontal),
     ]);
   }
 }
@@ -1509,28 +1660,54 @@ class _FooterLinks extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mobile = _isMobile(context);
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white)),
-      SizedBox(height: mobile ? 10 : 16),
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      Text(title.toUpperCase(),
+          style: TextStyle(
+              fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.6, color: Colors.white.withValues(alpha: 0.5))),
+      const SizedBox(height: 16),
       for (final (label, onTap) in links)
         Padding(
-          padding: EdgeInsets.only(bottom: mobile ? 7 : 10),
-          child: onTap != null
-              ? GestureDetector(
-                  onTap: () => onTap(context),
-                  child: MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: Text(label, style: const TextStyle(
-                      color: Color(0xFF94A3B8), fontSize: 13,
-                      decoration: TextDecoration.underline,
-                      decorationColor: Color(0xFF94A3B8),
-                    )),
-                  ),
-                )
-              : Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+          padding: const EdgeInsets.only(bottom: 11),
+          child: _FooterLink(label: label, onTap: onTap == null ? null : () => onTap(context)),
         ),
     ]);
+  }
+}
+
+class _FooterLink extends StatefulWidget {
+  final String label;
+  final VoidCallback? onTap;
+  const _FooterLink({required this.label, this.onTap});
+
+  @override
+  State<_FooterLink> createState() => _FooterLinkState();
+}
+
+class _FooterLinkState extends State<_FooterLink> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: widget.onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 150),
+          style: TextStyle(
+            color: _hover ? Colors.white : const Color(0xFFB4BCC8),
+            fontSize: 14,
+          ),
+          child: AnimatedSlide(
+            offset: Offset(_hover ? 0.03 : 0, 0),
+            duration: const Duration(milliseconds: 150),
+            child: Text(widget.label),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -1546,12 +1723,12 @@ class _MobileNavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: active ? _kOcean : _kMid),
+      leading: Icon(icon, color: active ? _kAccent : _kMid),
       title: Text(label,
           style: TextStyle(
               fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-              color: active ? _kOcean : const Color(0xFF475569))),
-      tileColor: active ? _kOcean.withValues(alpha: 0.06) : null,
+              color: active ? _kAccent : const Color(0xFF475569))),
+      tileColor: active ? _kAccent.withValues(alpha: 0.06) : null,
       onTap: onTap,
     );
   }
@@ -1567,10 +1744,16 @@ class _NavBtn extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextButton(
       onPressed: onTap,
+      style: TextButton.styleFrom(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        foregroundColor: _kSun,
+      ),
       child: Text(label,
           style: TextStyle(
-            color: active ? _kOcean : _kMid,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+            fontSize: 15,
+            letterSpacing: 0.3,
+            color: active ? _kSun : Colors.white.withValues(alpha: 0.88),
+            fontWeight: active ? FontWeight.w600 : FontWeight.w400,
           )),
     );
   }

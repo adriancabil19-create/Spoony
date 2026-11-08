@@ -9,6 +9,7 @@ import '../services/api_service.dart';
 import '../data/cebu_data.dart';
 import 'home_screen.dart';
 import 'auth_screen.dart';
+import '../widgets/wm_ui.dart';
 
 const _kAccLabels = {
   'acc_budget': 'Budget Stay',
@@ -33,6 +34,17 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedTab = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Guests who open /dashboard directly are sent to sign in first.
+    if (Supabase.instance.client.auth.currentUser == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+      });
+    }
+  }
 
   static const _tabs = [
     (Icons.calendar_today, 'Upcoming Trips'),
@@ -60,11 +72,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final initials = user != null ? _initials(user) : 'U';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Wm.surface,
       body: SingleChildScrollView(
         child: Column(
           children: [
-            SpoonyNavBar(current: 'dashboard'),
+            const SpoonyNavBar(current: 'dashboard', title: 'My', subtitle: 'Trips'),
             LayoutBuilder(builder: (ctx, constraints) {
               final mobile = constraints.maxWidth < 700;
               if (mobile) {
@@ -75,66 +87,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Row(children: [
                       CircleAvatar(
                         radius: 28,
-                        backgroundColor: const Color(0xFFE0F7FA),
+                        backgroundColor: const Color(0xFFFDF0E7),
                         child: Text(initials,
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF006994))),
+                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFFC2571F))),
                       ),
                       const SizedBox(width: 14),
-                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
-                        const Text('Member', style: TextStyle(fontSize: 12, color: Color(0xFF8B99A6))),
-                      ]),
-                      const Spacer(),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Wm.ink)),
+                          const Text('Member', style: TextStyle(fontSize: 12, color: Wm.muted)),
+                        ]),
+                      ),
+                      const SizedBox(width: 8),
                       OutlinedButton.icon(
                         onPressed: () async {
                           await Supabase.instance.client.auth.signOut();
-                          if (context.mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                          if (context.mounted) Navigator.pushReplacementNamed(context, HomeScreen.routeName);
                         },
                         icon: const Icon(Icons.logout, size: 14),
                         label: const Text('Out', style: TextStyle(fontSize: 12)),
                         style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Color(0xFFFF6B4A)),
-                          foregroundColor: const Color(0xFFFF6B4A),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          side: const BorderSide(color: Wm.border),
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFFE11D48),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          shape: const StadiumBorder(),
                         ),
                       ),
                     ]),
                     const SizedBox(height: 16),
-                    // Horizontal tab bar
+                    // Watermelon continuous tabs (sliding dark pill)
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: List.generate(_tabs.length, (i) {
-                          final (icon, label) = _tabs[i];
-                          final sel = _selectedTab == i;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: GestureDetector(
-                              onTap: () => setState(() => _selectedTab = i),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                                decoration: BoxDecoration(
-                                  color: sel ? const Color(0xFFE0F7FA) : Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                      color: sel ? const Color(0xFF00BCD4) : const Color(0xFFE8EDEF)),
-                                ),
-                                child: Row(children: [
-                                  Icon(icon, size: 16,
-                                      color: sel ? const Color(0xFF006994) : const Color(0xFF8B99A6)),
-                                  const SizedBox(width: 6),
-                                  Text(label,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
-                                        color: sel ? const Color(0xFF006994) : const Color(0xFF8B99A6),
-                                      )),
-                                ]),
-                              ),
-                            ),
-                          );
-                        }),
+                      child: WmContinuousTabs(
+                        labels: const ['Upcoming', 'History', 'Favorites', 'Settings'],
+                        selected: _selectedTab,
+                        onChanged: (i) => setState(() => _selectedTab = i),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -150,23 +141,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     SizedBox(
                       width: 280,
                       child: Container(
-                        padding: const EdgeInsets.all(24),
+                        padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFFE8EDEF)),
+                          gradient: const LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.white, Color(0xFFF1F0F7)],
+                          ),
+                          borderRadius: BorderRadius.circular(Wm.rLarge),
+                          border: Border.all(color: Wm.border),
+                          boxShadow: Wm.shadow(0.4),
                         ),
                         child: Column(children: [
                           CircleAvatar(
                             radius: 48,
-                            backgroundColor: const Color(0xFFE0F7FA),
+                            backgroundColor: const Color(0xFFFDF0E7),
                             child: Text(initials,
-                                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF006994))),
+                                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFFC2571F))),
                           ),
                           const SizedBox(height: 16),
-                          Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                          Text(name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
                           const SizedBox(height: 4),
-                          const Text('Member', style: TextStyle(fontSize: 12, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
+                          const Text('Member', style: TextStyle(fontSize: 12, color: Wm.muted, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 24),
                           ...List.generate(_tabs.length, (i) {
                             final (icon, label) = _tabs[i];
@@ -183,15 +179,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             child: OutlinedButton.icon(
                               onPressed: () async {
                                 await Supabase.instance.client.auth.signOut();
-                                if (context.mounted) Navigator.pushReplacementNamed(context, AuthScreen.routeName);
+                                if (context.mounted) Navigator.pushReplacementNamed(context, HomeScreen.routeName);
                               },
                               icon: const Icon(Icons.logout, size: 18),
                               label: const Text('Sign Out'),
                               style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Color(0xFFFF6B4A)),
-                                foregroundColor: const Color(0xFFFF6B4A),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                side: const BorderSide(color: Wm.border),
+                                backgroundColor: Colors.white,
+                                foregroundColor: const Color(0xFFE11D48),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: const StadiumBorder(),
                               ),
                             ),
                           ),
@@ -213,6 +210,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildContent(User? user) {
+    return WmBlurIn(key: ValueKey(_selectedTab), child: _tabBody(user));
+  }
+
+  Widget _tabBody(User? user) {
     switch (_selectedTab) {
       case 0:
         return _UpcomingTripsTab();
@@ -303,10 +304,10 @@ class _UpcomingTripsTabState extends State<_UpcomingTripsTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Upcoming Trips',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFFC2571F))),
         const SizedBox(height: 4),
         const Text('Your pending and confirmed bookings.',
-            style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
+            style: TextStyle(fontSize: 14, color: Wm.muted)),
         const SizedBox(height: 20),
         Row(children: [
           Expanded(
@@ -315,14 +316,14 @@ class _UpcomingTripsTabState extends State<_UpcomingTripsTab> {
               onChanged: (v) => setState(() => _searchQuery = v.trim()),
               decoration: InputDecoration(
                 hintText: 'Search by reference or tour…',
-                hintStyle: const TextStyle(color: Color(0xFF8B99A6), fontSize: 13),
-                prefixIcon: const Icon(Icons.search, color: Color(0xFF8B99A6), size: 18),
+                hintStyle: const TextStyle(color: Wm.muted, fontSize: 13),
+                prefixIcon: const Icon(Icons.search, color: Wm.muted, size: 18),
                 filled: true,
                 fillColor: const Color(0xFFF8FAFC),
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0EA5E9))),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Wm.border)),
+                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Wm.border)),
+                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFD96A2B))),
               ),
             ),
           ),
@@ -345,17 +346,17 @@ class _UpcomingTripsTabState extends State<_UpcomingTripsTab> {
               style: const TextStyle(fontSize: 13),
             ),
             style: OutlinedButton.styleFrom(
-              foregroundColor: _filterDate != null ? const Color(0xFF0EA5E9) : const Color(0xFF8B99A6),
-              side: BorderSide(color: _filterDate != null ? const Color(0xFF0EA5E9) : const Color(0xFFE2E8F0)),
+              foregroundColor: _filterDate != null ? const Color(0xFFD96A2B) : Wm.muted,
+              side: BorderSide(color: _filterDate != null ? const Color(0xFFD96A2B) : Wm.border),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: const StadiumBorder(),
             ),
           ),
           if (_filterDate != null) ...[
             const SizedBox(width: 4),
             IconButton(
               onPressed: () => setState(() => _filterDate = null),
-              icon: const Icon(Icons.close, size: 16, color: Color(0xFF8B99A6)),
+              icon: const Icon(Icons.close, size: 16, color: Wm.muted),
             ),
           ],
         ]),
@@ -447,12 +448,12 @@ class _BookingHistoryTabState extends State<_BookingHistoryTab> {
         decoration: BoxDecoration(
           color: sel ? color.withValues(alpha: 0.12) : Colors.white,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: sel ? color : const Color(0xFFE2E8F0)),
+          border: Border.all(color: sel ? color : Wm.border),
         ),
         child: Text(
           value == 'all' ? 'All (${_bookings.length})' : '$label (${_count(value)})',
           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
-              color: sel ? color : const Color(0xFF8B99A6)),
+              color: sel ? color : Wm.muted),
         ),
       ),
     );
@@ -465,37 +466,37 @@ class _BookingHistoryTabState extends State<_BookingHistoryTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Booking History',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFFC2571F))),
         const SizedBox(height: 4),
         const Text('All your bookings and reservations.',
-            style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
+            style: TextStyle(fontSize: 14, color: Wm.muted)),
         const SizedBox(height: 20),
         TextField(
           controller: _searchCtrl,
           onChanged: (v) => setState(() => _searchQuery = v.trim()),
           decoration: InputDecoration(
             hintText: 'Search by reference or tour…',
-            hintStyle: const TextStyle(color: Color(0xFF8B99A6), fontSize: 13),
-            prefixIcon: const Icon(Icons.search, color: Color(0xFF8B99A6), size: 18),
+            hintStyle: const TextStyle(color: Wm.muted, fontSize: 13),
+            prefixIcon: const Icon(Icons.search, color: Wm.muted, size: 18),
             filled: true,
             fillColor: const Color(0xFFF8FAFC),
             contentPadding: const EdgeInsets.symmetric(vertical: 12),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0EA5E9))),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Wm.border)),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Wm.border)),
+            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFD96A2B))),
           ),
         ),
         const SizedBox(height: 12),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(children: [
-            _chip('All',       'all',       const Color(0xFF006994)),
+            _chip('All',       'all',       const Color(0xFFC2571F)),
             const SizedBox(width: 8),
             _chip('Pending',   'pending',   const Color(0xFFFFC107)),
             const SizedBox(width: 8),
             _chip('Confirmed', 'confirmed', const Color(0xFF50C878)),
             const SizedBox(width: 8),
-            _chip('Completed', 'completed', const Color(0xFF0EA5E9)),
+            _chip('Completed', 'completed', const Color(0xFFD96A2B)),
             const SizedBox(width: 8),
             _chip('Cancelled', 'cancelled', const Color(0xFFFF6B4A)),
           ]),
@@ -556,10 +557,10 @@ class _FavoriteSpotsTabState extends State<_FavoriteSpotsTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Favorite Spots',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFFC2571F))),
         const SizedBox(height: 4),
         const Text("Destinations you've saved as favorites.",
-            style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
+            style: TextStyle(fontSize: 14, color: Wm.muted)),
         const SizedBox(height: 28),
         if (_favorites.isEmpty)
           const _EmptyState(message: 'No favorites yet. Heart a destination in Explore!')
@@ -599,7 +600,7 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Wm.rModal)),
           clipBehavior: Clip.antiAlias,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
@@ -608,7 +609,7 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)]),
+                  gradient: LinearGradient(colors: [Color(0xFFD96A2B), Color(0xFF3F7D58)]),
                 ),
                 child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Edit Full Name', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
@@ -628,9 +629,9 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
                       errorText: error,
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Wm.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Wm.border)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFD96A2B), width: 2)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
                   ),
@@ -649,9 +650,9 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
                         Navigator.pop(ctx, v);
                       },
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF0EA5E9),
+                        backgroundColor: const Color(0xFFD96A2B),
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: const StadiumBorder(),
                       ),
                       child: const Text('Save'),
                     ),
@@ -685,7 +686,7 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Wm.rModal)),
           clipBehavior: Clip.antiAlias,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
@@ -694,7 +695,7 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                 decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)]),
+                  gradient: LinearGradient(colors: [Color(0xFFD96A2B), Color(0xFF3F7D58)]),
                 ),
                 child: const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text('Change Password', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
@@ -715,9 +716,9 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
                       errorText: error,
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Wm.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Wm.border)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFD96A2B), width: 2)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       suffixIcon: IconButton(
                         icon: Icon(obscureNew ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF94A3B8)),
@@ -735,9 +736,9 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
                       prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFF94A3B8)),
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Wm.border)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Wm.border)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Color(0xFFD96A2B), width: 2)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       suffixIcon: IconButton(
                         icon: Icon(obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: const Color(0xFF94A3B8)),
@@ -762,9 +763,9 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
                         Navigator.pop(ctx, true);
                       },
                       style: FilledButton.styleFrom(
-                        backgroundColor: const Color(0xFF0EA5E9),
+                        backgroundColor: const Color(0xFFD96A2B),
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: const StadiumBorder(),
                       ),
                       child: const Text('Save'),
                     ),
@@ -800,10 +801,10 @@ class _AccountSettingsTabState extends State<_AccountSettingsTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Account Settings',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFF006994))),
+            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: Color(0xFFC2571F))),
         const SizedBox(height: 4),
         const Text('Manage your profile and preferences.',
-            style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6))),
+            style: TextStyle(fontSize: 14, color: Wm.muted)),
         const SizedBox(height: 28),
         _SettingsCard(
           child: Column(children: [
@@ -908,7 +909,7 @@ class _TripCardState extends State<_TripCard> {
     showDialog(
       context: context,
       builder: (_) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Wm.rModal)),
         clipBehavior: Clip.antiAlias,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 340),
@@ -917,7 +918,7 @@ class _TripCardState extends State<_TripCard> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               decoration: const BoxDecoration(
-                gradient: LinearGradient(colors: [Color(0xFF006994), Color(0xFF00BCD4)]),
+                gradient: LinearGradient(colors: [Color(0xFFC2571F), Wm.accent]),
               ),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Text('Booking Ticket', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white)),
@@ -930,11 +931,11 @@ class _TripCardState extends State<_TripCard> {
                 QrImageView(data: widget.ref, size: 200, backgroundColor: Colors.white),
                 const SizedBox(height: 16),
                 Text(widget.ref,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF006994), letterSpacing: 2)),
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFFC2571F), letterSpacing: 2)),
                 const SizedBox(height: 8),
                 const Text('Show this QR code at the tour meeting point for check-in.',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: Color(0xFF8B99A6), height: 1.5)),
+                    style: TextStyle(fontSize: 12, color: Wm.muted, height: 1.5)),
               ]),
             ),
           ]),
@@ -1246,8 +1247,9 @@ class _TripCardState extends State<_TripCard> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8EDEF)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Wm.border),
+        boxShadow: Wm.shadow(),
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         // Status row
@@ -1263,16 +1265,16 @@ class _TripCardState extends State<_TripCard> {
           ),
           const SizedBox(width: 12),
           Text(widget.ref,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
+              style: const TextStyle(fontSize: 12, color: Wm.muted, fontWeight: FontWeight.w600)),
           const Spacer(),
           Text(widget.amount,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF50C878))),
           const SizedBox(width: 6),
-          const Text('Total', style: TextStyle(fontSize: 11, color: Color(0xFF8B99A6))),
+          const Text('Total', style: TextStyle(fontSize: 11, color: Wm.muted)),
         ]),
         const SizedBox(height: 16),
         Text(widget.title,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
         const SizedBox(height: 16),
         Row(children: [
           _TripDetail(icon: Icons.calendar_today, label: 'Dates',  value: widget.dates),
@@ -1286,12 +1288,12 @@ class _TripCardState extends State<_TripCard> {
           onTap: () => setState(() => _expanded = !_expanded),
           child: Row(children: [
             const Text('Booking Details',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF006994))),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFFC2571F))),
             const SizedBox(width: 4),
             AnimatedRotation(
               turns: _expanded ? 0.5 : 0,
               duration: const Duration(milliseconds: 200),
-              child: const Icon(Icons.keyboard_arrow_down, size: 18, color: Color(0xFF006994)),
+              child: const Icon(Icons.keyboard_arrow_down, size: 18, color: Color(0xFFC2571F)),
             ),
           ]),
         ),
@@ -1303,9 +1305,9 @@ class _TripCardState extends State<_TripCard> {
             margin: const EdgeInsets.only(top: 12),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0F9FF),
+              color: const Color(0xFFFFF8F2),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFBAE6FD)),
+              border: Border.all(color: const Color(0xFFF8D2B8)),
             ),
             child: Column(children: [
               if (widget.tourType.isNotEmpty) ...[
@@ -1316,28 +1318,28 @@ class _TripCardState extends State<_TripCard> {
                       style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                   const Spacer(),
                   Text(widget.tourType,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
                 ]),
                 const SizedBox(height: 10),
               ],
               Row(children: [
-                const Icon(Icons.hotel, size: 16, color: Color(0xFF0EA5E9)),
+                const Icon(Icons.hotel, size: 16, color: Color(0xFFD96A2B)),
                 const SizedBox(width: 10),
                 const Text('Accommodation',
                     style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                 const Spacer(),
                 Text(_accLabel,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
               ]),
               const SizedBox(height: 10),
               Row(children: [
-                const Icon(Icons.directions_car, size: 16, color: Color(0xFF14B8A6)),
+                const Icon(Icons.directions_car, size: 16, color: Color(0xFF3F7D58)),
                 const SizedBox(width: 10),
                 const Text('Transport',
                     style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
                 const Spacer(),
                 Text(_transLabel,
-                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF00314F))),
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Color(0xFF0F172A))),
               ]),
             ]),
           ),
@@ -1355,9 +1357,9 @@ class _TripCardState extends State<_TripCard> {
                 icon: const Icon(Icons.qr_code_2, size: 18),
                 label: const Text('View Tickets (QR)'),
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF006994),
+                  backgroundColor: const Color(0xFFC2571F),
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: const StadiumBorder(),
                 ),
               ),
             ),
@@ -1369,10 +1371,10 @@ class _TripCardState extends State<_TripCard> {
               icon: const Icon(Icons.download, size: 18),
               label: const Text('Download Itinerary'),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF006994)),
-                foregroundColor: const Color(0xFF006994),
+                side: const BorderSide(color: Color(0xFFC2571F)),
+                foregroundColor: const Color(0xFFC2571F),
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: const StadiumBorder(),
               ),
             ),
           ),
@@ -1393,13 +1395,14 @@ class _EmptyState extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFB),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8EDEF)),
+        color: Wm.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Wm.border),
+        boxShadow: Wm.shadow(),
       ),
       child: Center(
         child: Text(message,
-            style: const TextStyle(fontSize: 15, color: Color(0xFF8B99A6))),
+            style: const TextStyle(fontSize: 15, color: Wm.muted)),
       ),
     );
   }
@@ -1418,14 +1421,14 @@ class _TripDetail extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            Icon(icon, size: 16, color: const Color(0xFF00BCD4)),
+            Icon(icon, size: 16, color: Wm.accent),
             const SizedBox(width: 8),
             Text(label,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF8B99A6))),
+                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Wm.muted)),
           ]),
           const SizedBox(height: 4),
           Text(value,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF00314F)),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF0F172A)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis),
         ],
@@ -1446,14 +1449,15 @@ class _FavoriteSpotTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE8EDEF)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Wm.border),
+        boxShadow: Wm.shadow(),
       ),
       child: Row(children: [
-        const Icon(Icons.location_on, color: Color(0xFF00BCD4), size: 20),
+        const Icon(Icons.location_on, color: Wm.accent, size: 20),
         const SizedBox(width: 12),
         Expanded(child: Text(name,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF00314F)))),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)))),
         IconButton(
           onPressed: onRemove,
           icon: const Icon(Icons.favorite, color: Color(0xFFFF6B4A), size: 20),
@@ -1462,9 +1466,9 @@ class _FavoriteSpotTile extends StatelessWidget {
         FilledButton(
           onPressed: () => Navigator.pushNamed(context, '/booking'),
           style: FilledButton.styleFrom(
-            backgroundColor: const Color(0xFF00BCD4),
+            backgroundColor: Wm.accent,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape: const StadiumBorder(),
           ),
           child: const Text('Book', style: TextStyle(fontSize: 13)),
         ),
@@ -1483,8 +1487,9 @@ class _SettingsCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8EDEF)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Wm.border),
+        boxShadow: Wm.shadow(),
       ),
       child: child,
     );
@@ -1505,11 +1510,11 @@ class _SettingsField extends StatelessWidget {
         SizedBox(
           width: 120,
           child: Text(label,
-              style: const TextStyle(fontSize: 13, color: Color(0xFF8B99A6), fontWeight: FontWeight.w600)),
+              style: const TextStyle(fontSize: 13, color: Wm.muted, fontWeight: FontWeight.w600)),
         ),
         Expanded(
           child: Text(value,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF00314F))),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0F172A))),
         ),
         if (onEdit != null)
           TextButton(onPressed: onEdit, child: const Text('Edit')),
@@ -1529,30 +1534,43 @@ class _MenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFFE0F7FA) : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(children: [
-            Icon(icon, size: 20, color: selected ? const Color(0xFF00BCD4) : const Color(0xFF8B99A6)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(label,
-                  style: TextStyle(
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? const Color(0xFF006994) : const Color(0xFF8B99A6),
-                    fontSize: 13,
-                  )),
-            ),
-          ]),
+    return WmPressable(
+      onTap: onTap,
+      pressScale: 0.97,
+      child: AnimatedContainer(
+        duration: Wm.medium,
+        curve: Wm.spring,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? Wm.activePill : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          boxShadow: selected ? Wm.shadow(0.5) : const [],
         ),
+        child: Row(children: [
+          AnimatedContainer(
+            duration: Wm.fast,
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: selected ? Wm.sun : Wm.chip,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 16, color: selected ? Colors.white : Wm.inkSoft),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: AnimatedDefaultTextStyle(
+              duration: Wm.fast,
+              style: TextStyle(
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                color: selected ? Colors.white : Wm.inkSoft,
+                fontSize: 13.5,
+              ),
+              child: Text(label),
+            ),
+          ),
+          if (selected) const Icon(Icons.chevron_right_rounded, color: Colors.white54, size: 18),
+        ]),
       ),
     );
   }

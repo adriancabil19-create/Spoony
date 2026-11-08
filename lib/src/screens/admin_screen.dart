@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import '../widgets/safe_image.dart';
+import '../widgets/wm_ui.dart';
+import '../widgets/media_dialogs.dart';
+import '../data/media_data.dart';
+import '../data/privacy_images.dart';
+import '../data/video_data.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/cebu_data.dart';
 import 'home_screen.dart';
@@ -40,25 +46,26 @@ class _AdminScreenState extends State<AdminScreen> {
   }
 
   static const _tabs = [
-    (Icons.list_alt, 'Bookings'),
-    (Icons.location_on, 'Manage Spots'),
-    (Icons.hotel, 'Manage Hotels'),
-    (Icons.tour, 'Manage Packages'),
-    (Icons.directions_car, 'Manage Transport'),
-    (Icons.drive_eta, 'Manage Drivers'),
+    (Icons.list_alt_rounded, 'Bookings'),
+    (Icons.location_on_rounded, 'Manage Spots'),
+    (Icons.hotel_rounded, 'Manage Hotels'),
+    (Icons.tour_rounded, 'Manage Packages'),
+    (Icons.directions_car_rounded, 'Manage Transport'),
+    (Icons.drive_eta_rounded, 'Manage Drivers'),
+    (Icons.perm_media_rounded, 'Media & Credits'),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7F8),
+      backgroundColor: Wm.surface,
       body: LayoutBuilder(
         builder: (context, viewConstraints) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── Header
-              SpoonyNavBar(current: 'admin'),
+              const SpoonyNavBar(current: 'admin'),
 
               // ── Body
               Expanded(
@@ -67,72 +74,20 @@ class _AdminScreenState extends State<AdminScreen> {
                     final mobile = constraints.maxWidth < 700;
                     if (mobile) {
                       return SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 16,
-                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: List.generate(_tabs.length, (i) {
-                                  final (icon, label) = _tabs[i];
-                                  final sel = _tab == i;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(right: 8),
-                                    child: GestureDetector(
-                                      onTap: () => setState(() => _tab = i),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 10,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: sel
-                                              ? const Color(0xFFE0F7FA)
-                                              : Colors.white,
-                                          borderRadius: BorderRadius.circular(
-                                            20,
-                                          ),
-                                          border: Border.all(
-                                            color: sel
-                                                ? const Color(0xFF00BCD4)
-                                                : const Color(0xFFE8EDEF),
-                                          ),
-                                        ),
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              icon,
-                                              size: 15,
-                                              color: sel
-                                                  ? const Color(0xFF006994)
-                                                  : const Color(0xFF8B99A6),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            Text(
-                                              label,
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: sel
-                                                    ? FontWeight.w700
-                                                    : FontWeight.w500,
-                                                color: sel
-                                                    ? const Color(0xFF006994)
-                                                    : const Color(0xFF8B99A6),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
+                              child: WmContinuousTabs(
+                                labels: [for (final t in _tabs) t.$2.replaceFirst('Manage ', '')],
+                                selected: _tab,
+                                onChanged: (i) => setState(() => _tab = i),
                               ),
                             ),
                             const SizedBox(height: 20),
-                            _buildContent(),
+                            WmBlurIn(key: ValueKey('m$_tab'), child: _buildContent()),
                           ],
                         ),
                       );
@@ -140,90 +95,44 @@ class _AdminScreenState extends State<AdminScreen> {
 
                     // Desktop layout
                     return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 48,
-                        vertical: 32,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 32),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           SizedBox(
-                            width: 220,
+                            width: 230,
                             child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFFE8EDEF),
-                                ),
-                              ),
+                              padding: const EdgeInsets.all(12),
+                              decoration: Wm.card(),
                               child: Column(
-                                children: List.generate(_tabs.length, (i) {
-                                  final (icon, label) = _tabs[i];
-                                  final sel = _tab == i;
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 8),
-                                    child: Material(
-                                      color: Colors.transparent,
-                                      child: InkWell(
-                                        onTap: () => setState(() => _tab = i),
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 12,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: sel
-                                                ? const Color(0xFFE0F7FA)
-                                                : Colors.transparent,
-                                            borderRadius: BorderRadius.circular(
-                                              8,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                icon,
-                                                size: 20,
-                                                color: sel
-                                                    ? const Color(0xFF00BCD4)
-                                                    : const Color(0xFF8B99A6),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: Text(
-                                                  label,
-                                                  style: TextStyle(
-                                                    fontSize: 13,
-                                                    fontWeight: sel
-                                                        ? FontWeight.w700
-                                                        : FontWeight.w500,
-                                                    color: sel
-                                                        ? const Color(
-                                                            0xFF006994,
-                                                          )
-                                                        : const Color(
-                                                            0xFF8B99A6,
-                                                          ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  const Padding(
+                                    padding: EdgeInsets.fromLTRB(10, 6, 10, 12),
+                                    child: Text('ADMIN',
+                                        style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: 2,
+                                            color: Wm.muted)),
+                                  ),
+                                  ...List.generate(_tabs.length, (i) {
+                                    final (icon, label) = _tabs[i];
+                                    return _AdminNavItem(
+                                      icon: icon,
+                                      label: label,
+                                      selected: _tab == i,
+                                      onTap: () => setState(() => _tab = i),
+                                    );
+                                  }),
+                                ],
                               ),
                             ),
                           ),
                           const SizedBox(width: 32),
                           Expanded(
                             child: SingleChildScrollView(
-                              child: _buildContent(),
+                              child: WmBlurIn(key: ValueKey('d$_tab'), child: _buildContent()),
                             ),
                           ),
                         ],
@@ -236,10 +145,7 @@ class _AdminScreenState extends State<AdminScreen> {
               // ── Footer
               Container(
                 color: const Color(0xFF0F172A),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                  horizontal: 24,
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
                 child: const Center(
                   child: Text(
                     '© 2026 Spoony Travel and Tours. All rights reserved.',
@@ -268,9 +174,74 @@ class _AdminScreenState extends State<AdminScreen> {
         return const _ManageTransportTab();
       case 5:
         return const _ManageDriversTab();
+      case 6:
+        return const _MediaTab();
       default:
         return const _BookingsTab();
     }
+  }
+}
+
+/// Watermelon-style side-nav item: rounded pill, dark active pill with accent icon dot.
+class _AdminNavItem extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _AdminNavItem({required this.icon, required this.label, required this.selected, required this.onTap});
+
+  @override
+  State<_AdminNavItem> createState() => _AdminNavItemState();
+}
+
+class _AdminNavItemState extends State<_AdminNavItem> {
+  bool _hover = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final sel = widget.selected;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: WmPressable(
+          onTap: widget.onTap,
+          pressScale: 0.97,
+          child: AnimatedContainer(
+            duration: Wm.fast,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+            decoration: BoxDecoration(
+              color: sel ? Wm.activePill : (_hover ? Wm.chip : Colors.transparent),
+              borderRadius: BorderRadius.circular(999),
+              boxShadow: sel ? Wm.shadow(0.4) : const [],
+            ),
+            child: Row(children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: sel ? Wm.accent : Colors.white,
+                  shape: BoxShape.circle,
+                  border: sel ? null : Border.all(color: Wm.border),
+                ),
+                child: Icon(widget.icon, size: 15, color: sel ? Colors.white : Wm.muted),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(widget.label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                      color: sel ? Colors.white : Wm.inkSoft,
+                    )),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -342,10 +313,11 @@ class _BookingsTabState extends State<_BookingsTab> {
           .eq('status', 'pending');
       _load();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
@@ -360,10 +332,11 @@ class _BookingsTabState extends State<_BookingsTab> {
           .eq('id', id);
       _load();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
@@ -413,19 +386,19 @@ class _BookingsTabState extends State<_BookingsTab> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF006994),
+                  color: Wm.ink,
                 ),
               ),
               IconButton(
                 onPressed: _load,
-                icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4)),
+                icon: const Icon(Icons.refresh, color: Wm.accent),
               ),
             ],
           ),
           const SizedBox(height: 4),
           const Text(
             'Manage and approve guest bookings.',
-            style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6)),
+            style: TextStyle(fontSize: 14, color: Wm.muted),
           ),
           const SizedBox(height: 16),
           // Search bar
@@ -440,7 +413,7 @@ class _BookingsTabState extends State<_BookingsTab> {
               ),
               prefixIcon: const Icon(
                 Icons.search,
-                color: Color(0xFF00BCD4),
+                color: Wm.accent,
                 size: 20,
               ),
               suffixIcon: _searchQuery.isNotEmpty
@@ -448,7 +421,7 @@ class _BookingsTabState extends State<_BookingsTab> {
                       icon: const Icon(
                         Icons.close,
                         size: 18,
-                        color: Color(0xFF8B99A6),
+                        color: Wm.muted,
                       ),
                       onPressed: () {
                         _searchCtrl.clear();
@@ -460,17 +433,17 @@ class _BookingsTabState extends State<_BookingsTab> {
               fillColor: Colors.white,
               contentPadding: const EdgeInsets.symmetric(vertical: 12),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFE8EDEF)),
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Wm.border),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: const BorderSide(color: Color(0xFFE8EDEF)),
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Wm.border),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(14),
                 borderSide: const BorderSide(
-                  color: Color(0xFF00BCD4),
+                  color: Wm.accent,
                   width: 1.5,
                 ),
               ),
@@ -498,12 +471,12 @@ class _BookingsTabState extends State<_BookingsTab> {
                   ),
                   decoration: BoxDecoration(
                     color: _filterDate != null
-                        ? const Color(0xFFE0F7FA)
+                        ? const Color(0xFFFDF0E7)
                         : Colors.white,
                     border: Border.all(
                       color: _filterDate != null
-                          ? const Color(0xFF00BCD4)
-                          : const Color(0xFFE8EDEF),
+                          ? Wm.accent
+                          : Wm.border,
                       width: _filterDate != null ? 1.5 : 1,
                     ),
                     borderRadius: BorderRadius.circular(20),
@@ -515,8 +488,8 @@ class _BookingsTabState extends State<_BookingsTab> {
                         Icons.calendar_today,
                         size: 14,
                         color: _filterDate != null
-                            ? const Color(0xFF006994)
-                            : const Color(0xFF8B99A6),
+                            ? const Color(0xFFC2571F)
+                            : Wm.muted,
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -529,8 +502,8 @@ class _BookingsTabState extends State<_BookingsTab> {
                               ? FontWeight.w700
                               : FontWeight.w500,
                           color: _filterDate != null
-                              ? const Color(0xFF006994)
-                              : const Color(0xFF8B99A6),
+                              ? const Color(0xFFC2571F)
+                              : Wm.muted,
                         ),
                       ),
                       if (_filterDate != null) ...[
@@ -540,7 +513,7 @@ class _BookingsTabState extends State<_BookingsTab> {
                           child: const Icon(
                             Icons.close,
                             size: 14,
-                            color: Color(0xFF006994),
+                            color: Color(0xFFC2571F),
                           ),
                         ),
                       ],
@@ -558,7 +531,7 @@ class _BookingsTabState extends State<_BookingsTab> {
                       _FilterChip(
                         label: 'All',
                         count: _bookings.length,
-                        color: const Color(0xFF006994),
+                        color: const Color(0xFFC2571F),
                         selected: _filter == 'all',
                         onTap: () => setState(() => _filter = 'all'),
                       ),
@@ -582,7 +555,7 @@ class _BookingsTabState extends State<_BookingsTab> {
                       _FilterChip(
                         label: 'Completed',
                         count: _count('completed'),
-                        color: const Color(0xFF0EA5E9),
+                        color: const Color(0xFFD96A2B),
                         selected: _filter == 'completed',
                         onTap: () => setState(() => _filter = 'completed'),
                       ),
@@ -661,7 +634,7 @@ class _FilterChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? color.withValues(alpha: 0.1) : Colors.white,
           border: Border.all(
-            color: selected ? color : const Color(0xFFE8EDEF),
+            color: selected ? color : Wm.border,
             width: selected ? 1.5 : 1,
           ),
           borderRadius: BorderRadius.circular(20),
@@ -672,7 +645,7 @@ class _FilterChip extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: selected ? color : const Color(0xFF8B99A6),
+                color: selected ? color : Wm.muted,
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
@@ -682,7 +655,7 @@ class _FilterChip extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(14),
               ),
               child: Text(
                 '$count',
@@ -770,10 +743,11 @@ class _BookingRowState extends State<_BookingRow> {
         );
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       if (mounted) setState(() => _assigningDriver = false);
     }
@@ -789,7 +763,7 @@ class _BookingRowState extends State<_BookingRow> {
         statusColor = const Color(0xFF50C878);
         break;
       case 'completed':
-        statusColor = const Color(0xFF0EA5E9);
+        statusColor = const Color(0xFFD96A2B);
         break;
       case 'cancelled':
         statusColor = const Color(0xFFFF6B4A);
@@ -831,8 +805,8 @@ class _BookingRowState extends State<_BookingRow> {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8EDEF)),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Wm.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -863,7 +837,7 @@ class _BookingRowState extends State<_BookingRow> {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: Color(0xFF006994),
+                  color: Color(0xFFC2571F),
                 ),
               ),
               const Spacer(),
@@ -883,7 +857,7 @@ class _BookingRowState extends State<_BookingRow> {
                       'Booked $createdAt',
                       style: const TextStyle(
                         fontSize: 11,
-                        color: Color(0xFF8B99A6),
+                        color: Wm.muted,
                       ),
                     ),
                 ],
@@ -958,13 +932,13 @@ class _BookingRowState extends State<_BookingRow> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.drive_eta, size: 14, color: Color(0xFF8B99A6)),
+                const Icon(Icons.drive_eta, size: 14, color: Wm.muted),
                 const SizedBox(width: 6),
                 const Text(
                   'Assigned Driver',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF8B99A6),
+                    color: Wm.muted,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -974,7 +948,7 @@ class _BookingRowState extends State<_BookingRow> {
             if (widget.drivers.isEmpty)
               const Text(
                 'No drivers yet — add one in Manage Drivers.',
-                style: TextStyle(fontSize: 12, color: Color(0xFF8B99A6)),
+                style: TextStyle(fontSize: 12, color: Wm.muted),
               )
             else
               Row(
@@ -996,7 +970,7 @@ class _BookingRowState extends State<_BookingRow> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.all(Radius.circular(8)),
-                          borderSide: BorderSide(color: Color(0xFF0EA5E9)),
+                          borderSide: BorderSide(color: Color(0xFFD96A2B)),
                         ),
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: 12,
@@ -1007,7 +981,7 @@ class _BookingRowState extends State<_BookingRow> {
                         'Unassigned',
                         style: TextStyle(
                           fontSize: 13,
-                          color: Color(0xFF8B99A6),
+                          color: Wm.muted,
                         ),
                       ),
                       items: [
@@ -1040,7 +1014,7 @@ class _BookingRowState extends State<_BookingRow> {
                       height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: Color(0xFF0EA5E9),
+                        color: Color(0xFFD96A2B),
                       ),
                     ),
                   ],
@@ -1063,13 +1037,13 @@ class _BookingRowState extends State<_BookingRow> {
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.drive_eta, size: 14, color: Color(0xFF8B99A6)),
+                const Icon(Icons.drive_eta, size: 14, color: Wm.muted),
                 const SizedBox(width: 6),
                 const Text(
                   'Assigned Driver',
                   style: TextStyle(
                     fontSize: 11,
-                    color: Color(0xFF8B99A6),
+                    color: Wm.muted,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1085,7 +1059,7 @@ class _BookingRowState extends State<_BookingRow> {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.person, size: 14, color: Color(0xFF8B99A6)),
+                  const Icon(Icons.person, size: 14, color: Wm.muted),
                   const SizedBox(width: 8),
                   Text(
                     '${currentDriver['full_name']} · ${currentDriver['phone'] ?? ''}',
@@ -1114,9 +1088,7 @@ class _BookingRowState extends State<_BookingRow> {
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF50C878),
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                      shape: const StadiumBorder(),
                     ),
                   ),
                 ),
@@ -1133,9 +1105,7 @@ class _BookingRowState extends State<_BookingRow> {
                       side: const BorderSide(color: Color(0xFFFF6B4A)),
                       foregroundColor: const Color(0xFFFF6B4A),
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                      shape: const StadiumBorder(),
                     ),
                   ),
                 ),
@@ -1153,9 +1123,7 @@ class _BookingRowState extends State<_BookingRow> {
                   side: const BorderSide(color: Color(0xFFFF6B4A)),
                   foregroundColor: const Color(0xFFFF6B4A),
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  shape: const StadiumBorder(),
                 ),
               ),
             ),
@@ -1182,7 +1150,7 @@ class _InfoRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 14, color: const Color(0xFF8B99A6)),
+        Icon(icon, size: 14, color: Wm.muted),
         const SizedBox(width: 6),
         Expanded(
           child: Column(
@@ -1192,7 +1160,7 @@ class _InfoRow extends StatelessWidget {
                 label,
                 style: const TextStyle(
                   fontSize: 10,
-                  color: Color(0xFF8B99A6),
+                  color: Wm.muted,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -1200,7 +1168,7 @@ class _InfoRow extends StatelessWidget {
                 value,
                 style: const TextStyle(
                   fontSize: 13,
-                  color: Color(0xFF00314F),
+                  color: Color(0xFF0F172A),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -1224,13 +1192,23 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
   bool _loading = true;
   List<Map<String, dynamic>> _spots = [];
   String? _error;
+  String _query = '';
 
   static const _regions = [
     ('cebu_city', 'Cebu City'),
     ('south_cebu', 'South Cebu'),
     ('north_cebu', 'North Cebu'),
-    ('islands', 'Islands'),
+    ('bohol', 'Bohol'),
   ];
+
+  /// Normalises DB snake_case and built-in enum names to one key per region.
+  static String _normRegion(String? r) => switch (r) {
+        'cebuCity' || 'cebu_city' => 'cebu_city',
+        'southCebu' || 'south_cebu' => 'south_cebu',
+        'northCebu' || 'north_cebu' => 'north_cebu',
+        'bohol' || 'islands' => 'bohol',
+        _ => r ?? 'other',
+      };
 
   @override
   void initState() {
@@ -1303,10 +1281,11 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
           .eq('id', spot['id'] as String);
       _load();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
@@ -1333,7 +1312,7 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
           : '',
     );
 
-    String region = existing?['region'] as String? ?? 'south_cebu';
+    String region = _normRegion(existing?['region'] as String? ?? 'south_cebu');
     bool saving = false;
     String? errorMsg;
 
@@ -1353,7 +1332,7 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF7ED),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFFBBF24)),
                   ),
                   child: const Row(
@@ -1383,7 +1362,7 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFFCA5A5)),
                   ),
                   child: Row(
@@ -1438,17 +1417,17 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
                   filled: true,
                   fillColor: const Color(0xFFF8FAFC),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(
-                      color: Color(0xFF0EA5E9),
+                      color: Color(0xFFD96A2B),
                       width: 2,
                     ),
                   ),
@@ -1479,6 +1458,33 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
                 controller: imgCtrl,
                 hint: 'https://example.com/image.jpg',
               ),
+              if (imgCtrl.text.trim().isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: SafeImage(
+                    imgCtrl.text.trim(),
+                    height: 140,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    showCredit: true,
+                    errorBuilder: (_, _, _) => Container(
+                      height: 140,
+                      color: Wm.chip,
+                      child: const Center(
+                        child: Icon(Icons.broken_image_outlined, color: Wm.muted),
+                      ),
+                    ),
+                  ),
+                ),
+                if (privacyImages.containsKey(imgCtrl.text.trim())) ...[
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Shown to visitors with faces / plate numbers blurred. Keep the original URL.',
+                    style: TextStyle(fontSize: 11, color: Wm.muted),
+                  ),
+                ],
+              ],
             ],
           ),
           actions: [
@@ -1535,14 +1541,12 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
                       }
                     },
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0EA5E9),
+                backgroundColor: const Color(0xFFD96A2B),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 12,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: const StadiumBorder(),
               ),
               child: saving
                   ? const SizedBox(
@@ -1590,43 +1594,40 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
           .eq('id', spot['id'] as String);
       _load();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
-  static const _regionOrder = [
-    'cebu_city',
-    'cebuCity',
-    'south_cebu',
-    'southCebu',
-    'north_cebu',
-    'northCebu',
-    'islands',
-    'bohol',
-  ];
+  static const _regionOrder = ['cebu_city', 'south_cebu', 'north_cebu', 'bohol'];
 
   static const _regionLabels = <String, String>{
     'cebu_city': 'Cebu City',
-    'cebuCity': 'Cebu City',
     'south_cebu': 'South Cebu',
-    'southCebu': 'South Cebu',
     'north_cebu': 'North Cebu',
-    'northCebu': 'North Cebu',
-    'islands': 'Islands',
-    'bohol': 'Islands',
+    'bohol': 'Bohol',
   };
+
+  static String regionLabel(String? raw) => _regionLabels[_normRegion(raw)] ?? raw ?? '';
 
   @override
   Widget build(BuildContext context) {
-    final all = _mergedSpots;
+    final q = _query.trim().toLowerCase();
+    final all = _mergedSpots
+        .where((s) =>
+            q.isEmpty ||
+            (s['name'] as String? ?? '').toLowerCase().contains(q) ||
+            regionLabel(s['region'] as String?).toLowerCase().contains(q))
+        .toList();
+    final total = _mergedSpots.length;
 
-    // Group spots by region in display order
+    // Group spots by (normalised) region in display order
     final Map<String, List<Map<String, dynamic>>> grouped = {};
     for (final s in all) {
-      grouped.putIfAbsent(s['region'] as String? ?? 'other', () => []).add(s);
+      grouped.putIfAbsent(_normRegion(s['region'] as String?), () => []).add(s);
     }
     final orderedKeys = [
       ..._regionOrder.where(grouped.containsKey),
@@ -1637,7 +1638,7 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
     for (final key in orderedKeys) {
       final spots = grouped[key]!;
       spotWidgets.add(
-        _SpotSectionHeader(
+        _SpotRegionHeader(
           label: _regionLabels[key] ?? key,
           count: spots.length,
         ),
@@ -1657,48 +1658,42 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          runSpacing: 10,
           children: [
-            const Text(
-              'Manage Spots',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF006994),
-              ),
-            ),
+            const _AdminTitle('Manage Spots'),
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
+                  tooltip: 'Refresh',
                   onPressed: _load,
-                  icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4)),
+                  icon: const Icon(Icons.refresh_rounded, color: Wm.accent),
                 ),
-                FilledButton.icon(
-                  onPressed: _showAddDialog,
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Add Spot'),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF006994),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
+                WmShimmerButton(
+                  label: 'Add Spot',
+                  icon: Icons.add_rounded,
+                  onTap: _showAddDialog,
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
                 ),
               ],
             ),
           ],
         ),
         const SizedBox(height: 4),
-        const Text(
-          'Edit, add, or toggle visibility of tour destinations.',
-          style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6)),
+        Text(
+          '$total destinations · edit, add, or toggle visibility. Built-in spots can be saved to the database.',
+          style: const TextStyle(fontSize: 14, color: Wm.muted),
         ),
         const SizedBox(height: 16),
+        _AdminSearchField(
+          hint: 'Search spots or regions…',
+          onChanged: (v) => setState(() => _query = v),
+        ),
+        const SizedBox(height: 8),
         if (_loading)
           const Center(
             child: Padding(
@@ -1729,57 +1724,14 @@ class _ManageSpotsTabState extends State<_ManageSpotsTab> {
             ),
           )
         else if (all.isEmpty)
-          const _AdminEmpty(
-            message: 'No spots yet. Click "Add Spot" to create one.',
+          _AdminEmpty(
+            message: q.isEmpty
+                ? 'No spots yet. Click "Add Spot" to create one.'
+                : 'No spots match "$_query".',
           )
         else
-          Expanded(child: ListView(children: spotWidgets)),
+          Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: spotWidgets),
       ],
-    );
-  }
-}
-
-class _SpotSectionHeader extends StatelessWidget {
-  final String label;
-  final int count;
-  const _SpotSectionHeader({required this.label, required this.count});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 12, 0, 8),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF006994),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE0F7FA),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '$count',
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF006994),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Divider(color: Color(0xFFE8EDEF), thickness: 1),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -1800,138 +1752,420 @@ class _SpotRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final available = spot['is_available'] as bool? ?? true;
-    final fee = (spot['entrance_fee'] as num?)?.toStringAsFixed(0) ?? '0';
+    final feeNum = (spot['entrance_fee'] as num?) ?? 0;
+    final fee = feeNum == 0 ? 'Free entrance' : '₱${feeNum.toStringAsFixed(0)} entrance';
     final isDefault = spot['_isDefault'] == true;
+    final urls = (spot['image_urls'] as List?)?.cast<String>() ?? const <String>[];
+    final img = urls.isNotEmpty ? urls.first : null;
+    final blurred = img != null && privacyImages.containsKey(img);
+    final region = _ManageSpotsTabState.regionLabel(spot['region'] as String?);
+
+    final thumb = ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        width: 64,
+        height: 64,
+        child: img == null
+            ? Container(
+                color: Wm.chip,
+                child: const Icon(Icons.location_on_rounded, color: Wm.accent, size: 22),
+              )
+            : Stack(fit: StackFit.expand, children: [
+                SafeImage(
+                  img,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => Container(
+                    color: Wm.chip,
+                    child: const Icon(Icons.image_not_supported_outlined, color: Wm.muted, size: 20),
+                  ),
+                ),
+                if (blurred)
+                  Positioned(
+                    right: 3,
+                    bottom: 3,
+                    child: Tooltip(
+                      message: 'Visitors see a privacy-blurred copy',
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                        child: const Icon(Icons.blur_on_rounded, size: 12, color: Colors.white),
+                      ),
+                    ),
+                  ),
+              ]),
+      ),
+    );
+
+    final info = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 4,
+          children: [
+            Text(
+              spot['name'] as String? ?? '—',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Wm.ink),
+            ),
+            if (isDefault) const _Pill(label: 'Built-in', color: Color(0xFFB45309), bg: Color(0xFFFFF4E0)),
+            if (!isDefault && !available)
+              const _Pill(label: 'Hidden', color: Color(0xFFB91C1C), bg: Color(0xFFFEF2F2)),
+          ],
+        ),
+        const SizedBox(height: 3),
+        Text('$region · $fee', style: const TextStyle(fontSize: 12, color: Wm.muted)),
+      ],
+    );
+
+    final actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextButton.icon(
+          onPressed: onEdit,
+          icon: Icon(isDefault ? Icons.cloud_upload_outlined : Icons.edit_outlined, size: 15),
+          label: Text(isDefault ? 'Save to DB' : 'Edit'),
+          style: TextButton.styleFrom(
+            foregroundColor: isDefault ? const Color(0xFFB45309) : Wm.accent,
+            shape: const StadiumBorder(),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+        ),
+        if (!isDefault) ...[
+          Tooltip(
+            message: available ? 'Visible to visitors' : 'Hidden from visitors',
+            child: Switch(
+              value: available,
+              onChanged: (_) => onToggle(),
+              activeThumbColor: Colors.white,
+              activeTrackColor: Wm.accent,
+            ),
+          ),
+          IconButton(
+            onPressed: onDelete,
+            icon: const Icon(Icons.delete_outline_rounded, size: 19, color: Color(0xFFE11D48)),
+            tooltip: 'Delete spot',
+          ),
+        ],
+      ],
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: isDefault ? const Color(0xFFFFCC80) : const Color(0xFFE8EDEF),
-        ),
+        borderRadius: BorderRadius.circular(Wm.rCard),
+        border: Border.all(color: isDefault ? const Color(0xFFFCE3C4) : Wm.border),
+        boxShadow: Wm.shadow(),
       ),
-      child: Column(
+      child: LayoutBuilder(builder: (context, c) {
+        if (c.maxWidth < 520) {
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              thumb,
+              const SizedBox(width: 12),
+              Expanded(child: info),
+            ]),
+            const SizedBox(height: 4),
+            Align(alignment: Alignment.centerRight, child: actions),
+          ]);
+        }
+        return Row(children: [
+          thumb,
+          const SizedBox(width: 14),
+          Expanded(child: info),
+          actions,
+        ]);
+      }),
+    );
+  }
+}
+
+// ── Shared admin UI bits (Watermelon style) ──────────────────────────────────
+
+class _AdminTitle extends StatelessWidget {
+  final String text;
+  const _AdminTitle(this.text);
+
+  @override
+  Widget build(BuildContext context) => Text(
+        text,
+        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Wm.ink, letterSpacing: -0.3),
+      );
+}
+
+class _Pill extends StatelessWidget {
+  final String label;
+  final Color color;
+  final Color bg;
+  const _Pill({required this.label, required this.color, required this.bg});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(999)),
+        child: Text(label, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: color)),
+      );
+}
+
+class _AdminSearchField extends StatelessWidget {
+  final String hint;
+  final ValueChanged<String> onChanged;
+  const _AdminSearchField({required this.hint, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    OutlineInputBorder b(Color c, [double w = 1]) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(999),
+          borderSide: BorderSide(color: c, width: w),
+        );
+    return TextField(
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Wm.muted, fontSize: 14),
+        prefixIcon: const Icon(Icons.search_rounded, color: Wm.muted),
+        filled: true,
+        fillColor: Colors.white,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: b(Wm.border),
+        enabledBorder: b(Wm.border),
+        focusedBorder: b(Wm.accent, 1.6),
+      ),
+    );
+  }
+}
+
+class _SpotRegionHeader extends StatelessWidget {
+  final String label;
+  final int count;
+  const _SpotRegionHeader({required this.label, required this.count});
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(2, 14, 0, 8),
+        child: Row(children: [
+          Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Wm.ink)),
+          const SizedBox(width: 8),
+          _Pill(label: '$count', color: Colors.white, bg: Wm.activePill),
+          const SizedBox(width: 10),
+          const Expanded(child: Divider(color: Wm.border, thickness: 1)),
+        ]),
+      );
+}
+
+// ── Tab: Media & Credits (read-only overview of site media) ──────────────────
+
+class _MediaTab extends StatelessWidget {
+  const _MediaTab();
+
+  static String _thumbFor(String url) {
+    final blurred = privacyImages[url];
+    if (blurred != null) return blurred;
+    return url.replaceFirst('/3840px-', '/960px-');
+  }
+
+  static String _fmt(int s) => '${s ~/ 60}:${(s % 60).toString().padLeft(2, '0')}';
+
+  Widget _section(String title, String subtitle) => Padding(
+        padding: const EdgeInsets.only(top: 28, bottom: 12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Wm.ink)),
+          const SizedBox(height: 2),
+          Text(subtitle, style: const TextStyle(fontSize: 13, color: Wm.muted)),
+        ]),
+      );
+
+  Widget _img(String src, {double? height}) => src.startsWith('assets/')
+      ? Image.asset(src, fit: BoxFit.cover, height: height, width: double.infinity)
+      : Image.network(src,
+          fit: BoxFit.cover,
+          height: height,
+          width: double.infinity,
+          errorBuilder: (_, _, _) => Container(color: Wm.chip));
+
+  @override
+  Widget build(BuildContext context) {
+    final editedCount = photoCredits.where((c) => c.modified).length;
+    return LayoutBuilder(builder: (context, c) {
+      final cols = c.maxWidth > 900 ? 3 : c.maxWidth > 560 ? 2 : 1;
+      Widget grid(List<Widget> items, double ratio) => GridView.count(
+            crossAxisCount: cols,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 14,
+            crossAxisSpacing: 14,
+            childAspectRatio: ratio,
+            children: items,
+          );
+
+      return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: isDefault
-                      ? const Color(0xFFFFF3E0)
-                      : const Color(0xFFE0F7FA),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  isDefault ? Icons.bookmark_outline : Icons.location_on,
-                  color: isDefault
-                      ? const Color(0xFFFF8C00)
-                      : const Color(0xFF006994),
-                  size: 20,
-                ),
+          const _AdminTitle('Media & Credits'),
+          const SizedBox(height: 4),
+          Text(
+            '${heroSlides.length} hero slides · ${travelVideos.length} videos · ${photoCredits.length} credited photos'
+            ' · $editedCount privacy-blurred',
+            style: const TextStyle(fontSize: 14, color: Wm.muted),
+          ),
+
+          // (a) Hero slides
+          _section('Home hero carousel', 'Shown full-screen on the home page, in this order.'),
+          grid([
+            for (var i = 0; i < heroSlides.length; i++)
+              _MediaCard(
+                image: _img(_thumbFor(heroSlides[i].image)),
+                badge: '${i + 1}',
+                title: heroSlides[i].title,
+                subtitle: heroSlides[i].location,
+                caption: heroSlides[i].isAsset
+                    ? 'Photo: Spoony Travel and Tours'
+                    : (creditForUrl(heroSlides[i].image) != null
+                        ? '© ${creditForUrl(heroSlides[i].image)!.author} · ${creditForUrl(heroSlides[i].image)!.license}'
+                        : ''),
+                blurred: privacyImages.containsKey(heroSlides[i].image),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            spot['name'] as String? ?? '—',
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF00314F),
-                            ),
-                          ),
-                        ),
-                        if (isDefault) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 7,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFCC80),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Text(
-                              'Default',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF795548),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${spot['region'] ?? ''} · ₱$fee entrance',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Color(0xFF8B99A6),
-                      ),
-                    ),
-                  ],
+          ], 1.15),
+
+          // (b) Videos
+          _section('Travel videos', 'Played in-app from the Videos button on the home page.'),
+          if (travelVideos.isEmpty)
+            const _AdminEmpty(message: 'No videos configured yet.')
+          else
+            grid([
+              for (final v in travelVideos)
+                _MediaCard(
+                  image: Stack(fit: StackFit.expand, children: [
+                    _img(v.posterUrl),
+                    const Center(child: Icon(Icons.play_circle_fill_rounded, color: Colors.white, size: 40)),
+                  ]),
+                  badge: _fmt(v.durationSec),
+                  title: v.title,
+                  subtitle: v.place,
+                  caption: '© ${v.author} · ${v.license}',
+                  onTap: () => openExternal(context, v.sourceUrl),
                 ),
-              ),
-              // Action buttons
-              TextButton.icon(
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit, size: 15),
-                label: Text(isDefault ? 'Save to DB' : 'Edit'),
-                style: TextButton.styleFrom(
-                  foregroundColor: isDefault
-                      ? const Color(0xFFFF8C00)
-                      : const Color(0xFF006994),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                ),
-              ),
-              if (!isDefault) ...[
-                Switch(
-                  value: available,
-                  onChanged: (_) => onToggle(),
-                  activeThumbColor: const Color(0xFF00BCD4),
-                ),
-                Text(
-                  available ? 'On' : 'Off',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: available
-                        ? const Color(0xFF50C878)
-                        : const Color(0xFFFF6B4A),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                IconButton(
-                  onPressed: onDelete,
-                  icon: const Icon(
-                    Icons.delete_outline,
-                    size: 18,
-                    color: Color(0xFFFF6B4A),
-                  ),
-                  tooltip: 'Delete spot',
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
+            ], 1.15),
+
+          // (c) Photo credits
+          _section('Photo credits', 'All photos are from Wikimedia Commons under open licenses. Tap a row to open its source.'),
+          Container(
+            decoration: Wm.card(),
+            clipBehavior: Clip.antiAlias,
+            child: Column(children: [
+              for (var i = 0; i < photoCredits.length; i++) ...[
+                if (i > 0) const Divider(height: 1, color: Wm.border),
+                _CreditRow(credit: photoCredits[i]),
               ],
-            ],
+            ]),
           ),
         ],
+      );
+    });
+  }
+}
+
+class _MediaCard extends StatelessWidget {
+  final Widget image;
+  final String badge;
+  final String title;
+  final String subtitle;
+  final String caption;
+  final bool blurred;
+  final VoidCallback? onTap;
+  const _MediaCard({
+    required this.image,
+    required this.badge,
+    required this.title,
+    required this.subtitle,
+    required this.caption,
+    this.blurred = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return WmPressable(
+      onTap: onTap,
+      pressScale: onTap == null ? 1 : 0.97,
+      child: Container(
+        decoration: Wm.card(),
+        clipBehavior: Clip.antiAlias,
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(
+            child: Stack(fit: StackFit.expand, children: [
+              WmZoomFrame(child: image),
+              Positioned(
+                top: 8,
+                left: 8,
+                child: _Pill(label: badge, color: Colors.white, bg: Colors.black.withValues(alpha: 0.6)),
+              ),
+              if (blurred)
+                const Positioned(
+                  top: 8,
+                  right: 8,
+                  child: _Pill(label: 'Blurred copy', color: Colors.white, bg: Wm.accent),
+                ),
+            ]),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Wm.ink)),
+              Text(subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 12, color: Wm.muted)),
+              if (caption.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(caption,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, color: Wm.muted)),
+              ],
+            ]),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+class _CreditRow extends StatelessWidget {
+  final PhotoCredit credit;
+  const _CreditRow({required this.credit});
+
+  @override
+  Widget build(BuildContext context) {
+    final c = credit;
+    return InkWell(
+      onTap: c.sourceUrl.isEmpty ? null : () => openExternal(context, c.sourceUrl),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(children: [
+          const Icon(Icons.photo_outlined, size: 18, color: Wm.accent),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(c.subject,
+                  style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: Wm.ink)),
+              const SizedBox(height: 2),
+              Wrap(spacing: 6, runSpacing: 4, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                Text('by ${c.author}', style: const TextStyle(fontSize: 12, color: Wm.muted)),
+                if (c.license.isNotEmpty) _Pill(label: c.license, color: Wm.inkSoft, bg: Wm.chip),
+                if (c.modified)
+                  const _Pill(label: 'Edited · blurred', color: Color(0xFFB45309), bg: Color(0xFFFFF4E0)),
+              ]),
+            ]),
+          ),
+          if (c.sourceUrl.isNotEmpty) const Icon(Icons.open_in_new_rounded, size: 16, color: Wm.muted),
+        ]),
       ),
     );
   }
@@ -2029,7 +2263,7 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
             children: [
               Text(
                 hotel['description'] as String? ?? '',
-                style: const TextStyle(color: Color(0xFF8B99A6), fontSize: 13),
+                style: const TextStyle(color: Wm.muted, fontSize: 13),
               ),
               const SizedBox(height: 16),
               if (errorMsg != null) ...[
@@ -2038,7 +2272,7 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFFCA5A5)),
                   ),
                   child: Row(
@@ -2106,14 +2340,12 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
                       }
                     },
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0EA5E9),
+                backgroundColor: const Color(0xFFD96A2B),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 12,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: const StadiumBorder(),
               ),
               child: saving
                   ? const SizedBox(
@@ -2141,16 +2373,17 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
           .eq('id', hotel['id'] as String);
       _load();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
   static const _categoryColors = {
     'Budget': Color(0xFF50C878),
-    'Standard': Color(0xFF00BCD4),
+    'Standard': Wm.accent,
     'Premium': Color(0xFF9C27B0),
     'Luxury': Color(0xFFFF8C00),
   };
@@ -2168,19 +2401,19 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF006994),
+                color: Wm.ink,
               ),
             ),
             IconButton(
               onPressed: _load,
-              icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4)),
+              icon: const Icon(Icons.refresh, color: Wm.accent),
             ),
           ],
         ),
         const SizedBox(height: 4),
         const Text(
           'Edit accommodation prices and toggle availability.',
-          style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6)),
+          style: TextStyle(fontSize: 14, color: Wm.muted),
         ),
         const SizedBox(height: 20),
         if (_loading)
@@ -2197,8 +2430,8 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE8EDEF)),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Wm.border),
               ),
               child: Row(
                 children: [
@@ -2208,15 +2441,15 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
                       color:
                           (_categoryColors[hotel['category'] as String? ??
                                       ''] ??
-                                  const Color(0xFF006994))
+                                  const Color(0xFFC2571F))
                               .withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(
                       Icons.hotel,
                       color:
                           _categoryColors[hotel['category'] as String? ?? ''] ??
-                          const Color(0xFF006994),
+                          const Color(0xFFC2571F),
                       size: 26,
                     ),
                   ),
@@ -2232,7 +2465,7 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
                               style: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
-                                color: Color(0xFF00314F),
+                                color: Color(0xFF0F172A),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -2246,9 +2479,9 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
                                     (_categoryColors[hotel['category']
                                                     as String? ??
                                                 ''] ??
-                                            const Color(0xFF006994))
+                                            const Color(0xFFC2571F))
                                         .withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(18),
                               ),
                               child: Text(
                                 hotel['category'] as String? ?? '',
@@ -2259,7 +2492,7 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
                                       _categoryColors[hotel['category']
                                               as String? ??
                                           ''] ??
-                                      const Color(0xFF006994),
+                                      const Color(0xFFC2571F),
                                 ),
                               ),
                             ),
@@ -2270,7 +2503,7 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
                           hotel['description'] as String? ?? '',
                           style: const TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF8B99A6),
+                            color: Wm.muted,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -2296,7 +2529,7 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
                         icon: const Icon(Icons.edit, size: 16),
                         label: const Text('Edit Price'),
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF006994),
+                          foregroundColor: const Color(0xFFC2571F),
                         ),
                       ),
                       Row(
@@ -2304,7 +2537,7 @@ class _ManageHotelsTabState extends State<_ManageHotelsTab> {
                           Switch(
                             value: hotel['is_active'] as bool? ?? true,
                             onChanged: (_) => _toggleActive(hotel),
-                            activeThumbColor: const Color(0xFF00BCD4),
+                            activeThumbColor: Wm.accent,
                           ),
                           Text(
                             (hotel['is_active'] as bool? ?? true)
@@ -2433,6 +2666,7 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
         (existing?['highlights'] as List?)?.map((h) => h.toString()).toSet() ??
         <String>{};
     var selectedSpots = Set<String>.from(existingHighlights);
+    var spotQuery = '';
 
     String region = existing?['region'] as String? ?? _regionOptions.first;
     if (!_regionOptions.contains(region)) region = _regionOptions.first;
@@ -2456,7 +2690,7 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF7ED),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFFBBF24)),
                   ),
                   child: const Row(
@@ -2486,7 +2720,7 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFFCA5A5)),
                   ),
                   child: const Row(
@@ -2516,7 +2750,7 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFFCA5A5)),
                   ),
                   child: Row(
@@ -2575,17 +2809,17 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
                   filled: true,
                   fillColor: const Color(0xFFF8FAFC),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     borderSide: const BorderSide(
-                      color: Color(0xFF0EA5E9),
+                      color: Color(0xFFD96A2B),
                       width: 2,
                     ),
                   ),
@@ -2639,55 +2873,90 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
                 hint: 'https://example.com/image.jpg',
               ),
               const SizedBox(height: 14),
-              const Text(
-                'INCLUDED SPOTS',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF64748B),
-                  letterSpacing: 0.2,
+              Row(children: [
+                const Text(
+                  'INCLUDED SPOTS',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF64748B),
+                    letterSpacing: 0.2,
+                  ),
                 ),
-              ),
+                const Spacer(),
+                Text(
+                  '${selectedSpots.length} of ${cebuDestinations.length} selected',
+                  style: const TextStyle(fontSize: 11, color: Wm.muted),
+                ),
+              ]),
               const SizedBox(height: 6),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                ),
-                child: Column(
-                  children: cebuDestinations.map((d) {
-                    final checked = selectedSpots.contains(d.name);
-                    return CheckboxListTile(
-                      value: checked,
-                      dense: true,
-                      activeColor: const Color(0xFF0EA5E9),
-                      title: Text(
-                        d.name,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF00314F),
-                        ),
-                      ),
-                      subtitle: Text(
-                        d.region.name,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Color(0xFF8B99A6),
-                        ),
-                      ),
-                      onChanged: (v) {
-                        final updated = Set<String>.from(selectedSpots);
-                        v == true
-                            ? updated.add(d.name)
-                            : updated.remove(d.name);
-                        setDlg(() => selectedSpots = updated);
-                      },
-                    );
-                  }).toList(),
-                ),
+              _AdminSearchField(
+                hint: 'Filter spots…',
+                onChanged: (v) => setDlg(() => spotQuery = v),
               ),
+              const SizedBox(height: 8),
+              Builder(builder: (_) {
+                final q = spotQuery.trim().toLowerCase();
+                final list = cebuDestinations
+                    .where((d) =>
+                        q.isEmpty ||
+                        d.name.toLowerCase().contains(q) ||
+                        regionTitle(d.region).toLowerCase().contains(q))
+                    .toList();
+                return Container(
+                  height: 300,
+                  decoration: BoxDecoration(
+                    color: Wm.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Wm.border),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: list.isEmpty
+                      ? const Center(
+                          child: Text('No spots match.', style: TextStyle(color: Wm.muted, fontSize: 12)),
+                        )
+                      : ListView.builder(
+                          itemCount: list.length,
+                          itemBuilder: (_, i) {
+                            final d = list[i];
+                            final checked = selectedSpots.contains(d.name);
+                            return CheckboxListTile(
+                              value: checked,
+                              dense: true,
+                              activeColor: Wm.accent,
+                              secondary: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: SafeImage(
+                                  d.images.isNotEmpty ? d.images.first : '',
+                                  width: 36,
+                                  height: 36,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) =>
+                                      Container(width: 36, height: 36, color: Wm.chip),
+                                ),
+                              ),
+                              title: Text(
+                                d.name,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Wm.ink,
+                                ),
+                              ),
+                              subtitle: Text(
+                                regionTitle(d.region),
+                                style: const TextStyle(fontSize: 11, color: Wm.muted),
+                              ),
+                              onChanged: (v) {
+                                final updated = Set<String>.from(selectedSpots);
+                                v == true ? updated.add(d.name) : updated.remove(d.name);
+                                setDlg(() => selectedSpots = updated);
+                              },
+                            );
+                          },
+                        ),
+                );
+              }),
             ],
           ),
           actions: [
@@ -2750,14 +3019,12 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
                       }
                     },
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0EA5E9),
+                backgroundColor: const Color(0xFFD96A2B),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 12,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: const StadiumBorder(),
               ),
               child: saving
                   ? const SizedBox(
@@ -2793,10 +3060,11 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
           .eq('id', pkg['id'] as String);
       _load();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
@@ -2829,10 +3097,11 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
           .eq('id', pkg['id'] as String);
       _load();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
@@ -2849,28 +3118,26 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF006994),
+                color: Wm.ink,
               ),
             ),
             Row(
               children: [
                 IconButton(
                   onPressed: _load,
-                  icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4)),
+                  icon: const Icon(Icons.refresh, color: Wm.accent),
                 ),
                 FilledButton.icon(
                   onPressed: _showAddDialog,
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Add Package'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF006994),
+                    backgroundColor: const Color(0xFFC2571F),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 10,
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    shape: const StadiumBorder(),
                   ),
                 ),
               ],
@@ -2880,7 +3147,7 @@ class _ManagePackagesTabState extends State<_ManagePackagesTab> {
         const SizedBox(height: 4),
         const Text(
           'Add, edit, toggle or delete tour packages.',
-          style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6)),
+          style: TextStyle(fontSize: 14, color: Wm.muted),
         ),
         const SizedBox(height: 10),
         if (!_dbAvailable)
@@ -2961,9 +3228,9 @@ class _PackageAdminRow extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: isDefault ? const Color(0xFFFFCC80) : const Color(0xFFE8EDEF),
+          color: isDefault ? const Color(0xFFFFCC80) : Wm.border,
         ),
       ),
       child: Column(
@@ -2974,7 +3241,7 @@ class _PackageAdminRow extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(
+                child: SafeImage(
                   package['image_url'] as String? ?? '',
                   width: 80,
                   height: 80,
@@ -2982,10 +3249,10 @@ class _PackageAdminRow extends StatelessWidget {
                   errorBuilder: (_, _, _) => Container(
                     width: 80,
                     height: 80,
-                    color: const Color(0xFFE0F7FA),
+                    color: const Color(0xFFFDF0E7),
                     child: const Icon(
                       Icons.tour,
-                      color: Color(0xFF006994),
+                      color: Color(0xFFC2571F),
                       size: 32,
                     ),
                   ),
@@ -3004,7 +3271,7 @@ class _PackageAdminRow extends StatelessWidget {
                             style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF00314F),
+                              color: Color(0xFF0F172A),
                             ),
                           ),
                         ),
@@ -3017,7 +3284,7 @@ class _PackageAdminRow extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFCC80),
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: const Text(
                               'Default',
@@ -3036,7 +3303,7 @@ class _PackageAdminRow extends StatelessWidget {
                       package['tagline'] as String? ?? '',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF8B99A6),
+                        color: Wm.muted,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -3046,7 +3313,7 @@ class _PackageAdminRow extends StatelessWidget {
                       '$region · $days day${days != 1 ? 's' : ''}',
                       style: const TextStyle(
                         fontSize: 12,
-                        color: Color(0xFF8B99A6),
+                        color: Wm.muted,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -3055,7 +3322,7 @@ class _PackageAdminRow extends StatelessWidget {
                         _PkgPriceTag(
                           label: 'Joiner',
                           price: '₱$joiner',
-                          color: const Color(0xFF00BCD4),
+                          color: Wm.accent,
                         ),
                         const SizedBox(width: 10),
                         _PkgPriceTag(
@@ -3078,7 +3345,7 @@ class _PackageAdminRow extends StatelessWidget {
                     style: TextButton.styleFrom(
                       foregroundColor: isDefault
                           ? const Color(0xFFFF8C00)
-                          : const Color(0xFF006994),
+                          : const Color(0xFFC2571F),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
                         vertical: 4,
@@ -3091,7 +3358,7 @@ class _PackageAdminRow extends StatelessWidget {
                         Switch(
                           value: active,
                           onChanged: (_) => onToggle(),
-                          activeThumbColor: const Color(0xFF00BCD4),
+                          activeThumbColor: Wm.accent,
                         ),
                         Text(
                           active ? 'On' : 'Off',
@@ -3168,7 +3435,7 @@ class _PkgPriceTag extends StatelessWidget {
           ),
           Text(
             '/person',
-            style: const TextStyle(fontSize: 9, color: Color(0xFF8B99A6)),
+            style: const TextStyle(fontSize: 9, color: Wm.muted),
           ),
         ],
       ),
@@ -3260,7 +3527,7 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
             children: [
               Text(
                 transport['description'] as String? ?? '',
-                style: const TextStyle(color: Color(0xFF8B99A6), fontSize: 13),
+                style: const TextStyle(color: Wm.muted, fontSize: 13),
               ),
               const SizedBox(height: 16),
               if (errorMsg != null) ...[
@@ -3269,7 +3536,7 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
                   margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(color: const Color(0xFFFCA5A5)),
                   ),
                   child: Row(
@@ -3337,14 +3604,12 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
                       }
                     },
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0EA5E9),
+                backgroundColor: const Color(0xFFD96A2B),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 12,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: const StadiumBorder(),
               ),
               child: saving
                   ? const SizedBox(
@@ -3372,10 +3637,11 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
           .eq('id', transport['id'] as String);
       _load();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
@@ -3392,19 +3658,19 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
               style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF006994),
+                color: Wm.ink,
               ),
             ),
             IconButton(
               onPressed: _load,
-              icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4)),
+              icon: const Icon(Icons.refresh, color: Wm.accent),
             ),
           ],
         ),
         const SizedBox(height: 4),
         const Text(
           'Edit transport prices and toggle availability.',
-          style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6)),
+          style: TextStyle(fontSize: 14, color: Wm.muted),
         ),
         const SizedBox(height: 20),
         if (_loading)
@@ -3421,21 +3687,21 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE8EDEF)),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Wm.border),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFE0F7FA),
-                      borderRadius: BorderRadius.circular(10),
+                      color: const Color(0xFFFDF0E7),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: Icon(
                       _transIcons[t['id'] as String? ?? ''] ??
                           Icons.directions_car,
-                      color: const Color(0xFF006994),
+                      color: const Color(0xFFC2571F),
                       size: 26,
                     ),
                   ),
@@ -3449,7 +3715,7 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: Color(0xFF00314F),
+                            color: Color(0xFF0F172A),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -3457,7 +3723,7 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
                           t['description'] as String? ?? '',
                           style: const TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF8B99A6),
+                            color: Wm.muted,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -3483,7 +3749,7 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
                         icon: const Icon(Icons.edit, size: 16),
                         label: const Text('Edit Price'),
                         style: TextButton.styleFrom(
-                          foregroundColor: const Color(0xFF006994),
+                          foregroundColor: const Color(0xFFC2571F),
                         ),
                       ),
                       Row(
@@ -3491,7 +3757,7 @@ class _ManageTransportTabState extends State<_ManageTransportTab> {
                           Switch(
                             value: t['is_active'] as bool? ?? true,
                             onChanged: (_) => _toggleActive(t),
-                            activeThumbColor: const Color(0xFF00BCD4),
+                            activeThumbColor: Wm.accent,
                           ),
                           Text(
                             (t['is_active'] as bool? ?? true)
@@ -3535,29 +3801,46 @@ class _ModernDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(Wm.rModal)),
       clipBehavior: Clip.antiAlias,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 620),
+        constraints: const BoxConstraints(maxWidth: 540, maxHeight: 680),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              padding: const EdgeInsets.fromLTRB(24, 22, 16, 18),
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)],
-                ),
+                border: Border(bottom: BorderSide(color: Wm.border)),
               ),
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.white,
+              child: Row(children: [
+                Container(
+                  width: 8,
+                  height: 22,
+                  decoration: BoxDecoration(color: Wm.accent, borderRadius: BorderRadius.circular(999)),
                 ),
-              ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: Wm.ink,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Close',
+                  onPressed: () => Navigator.maybePop(context),
+                  icon: const Icon(Icons.close_rounded, color: Wm.muted),
+                ),
+              ]),
             ),
             Flexible(
               child: SingleChildScrollView(
@@ -3568,16 +3851,27 @@ class _ModernDialog extends StatelessWidget {
             Container(
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
               decoration: const BoxDecoration(
-                border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                color: Wm.surface,
+                border: Border(top: BorderSide(color: Wm.border)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  for (int i = 0; i < actions.length; i++) ...[
-                    if (i > 0) const SizedBox(width: 10),
-                    actions[i],
-                  ],
-                ],
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  filledButtonTheme: FilledButtonThemeData(
+                    style: FilledButton.styleFrom(
+                      shape: const StadiumBorder(),
+                      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+                    ),
+                  ),
+                  textButtonTheme: TextButtonThemeData(
+                    style: TextButton.styleFrom(shape: const StadiumBorder()),
+                  ),
+                ),
+                child: Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: actions,
+                ),
               ),
             ),
           ],
@@ -3625,20 +3919,20 @@ class _DlgField extends StatelessWidget {
           keyboardType: keyboardType,
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFFCBD5E1), fontSize: 14),
+            hintStyle: const TextStyle(color: Color(0xFFA1A1AA), fontSize: 14),
             filled: true,
-            fillColor: const Color(0xFFF8FAFC),
+            fillColor: Wm.surface,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Wm.border),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Wm.border),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: Wm.accent, width: 1.6),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 14,
@@ -3744,10 +4038,11 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
       }
       await _load();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -3848,21 +4143,21 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                           filled: true,
                           fillColor: const Color(0xFFF8FAFC),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(14),
                             borderSide: const BorderSide(
                               color: Color(0xFFE2E8F0),
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(14),
                             borderSide: const BorderSide(
                               color: Color(0xFFE2E8F0),
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(14),
                             borderSide: const BorderSide(
-                              color: Color(0xFF0EA5E9),
+                              color: Color(0xFFD96A2B),
                               width: 2,
                             ),
                           ),
@@ -3890,7 +4185,7 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                       ),
                     ),
                     value: avail,
-                    activeThumbColor: const Color(0xFF0EA5E9),
+                    activeThumbColor: const Color(0xFFD96A2B),
                     contentPadding: EdgeInsets.zero,
                     onChanged: (v) => setDlg(() => avail = v),
                   ),
@@ -3934,16 +4229,17 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                         if (ctx.mounted) Navigator.pop(ctx);
                         await _load();
                       } catch (e) {
-                        if (ctx.mounted)
+                        if (ctx.mounted) {
                           ScaffoldMessenger.of(
                             ctx,
                           ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                        }
                       } finally {
                         setDlg(() => saving = false);
                       }
                     },
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF0EA5E9),
+                backgroundColor: const Color(0xFFD96A2B),
               ),
               child: saving
                   ? const SizedBox(
@@ -3998,10 +4294,11 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
       await Supabase.instance.client.from('drivers').delete().eq('id', id);
       await _load();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     }
   }
 
@@ -4015,13 +4312,13 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF006994),
+            color: Wm.ink,
           ),
         ),
         const SizedBox(height: 4),
         const Text(
           'Add drivers and assign them to bookings.',
-          style: TextStyle(fontSize: 14, color: Color(0xFF8B99A6)),
+          style: TextStyle(fontSize: 14, color: Wm.muted),
         ),
         const SizedBox(height: 24),
 
@@ -4030,8 +4327,8 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: const Color(0xFFE8EDEF)),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Wm.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -4041,7 +4338,7 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  color: Color(0xFF006994),
+                  color: Color(0xFFC2571F),
                 ),
               ),
               const SizedBox(height: 16),
@@ -4109,17 +4406,17 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                       filled: true,
                       fillColor: const Color(0xFFF8FAFC),
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(14),
                         borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(14),
                         borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(14),
                         borderSide: const BorderSide(
-                          color: Color(0xFF0EA5E9),
+                          color: Color(0xFFD96A2B),
                           width: 2,
                         ),
                       ),
@@ -4155,11 +4452,9 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF0EA5E9),
+                    backgroundColor: const Color(0xFFD96A2B),
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+                    shape: const StadiumBorder(),
                   ),
                 ),
               ),
@@ -4177,12 +4472,12 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Color(0xFF006994),
+                color: Color(0xFFC2571F),
               ),
             ),
             IconButton(
               onPressed: _load,
-              icon: const Icon(Icons.refresh, color: Color(0xFF00BCD4)),
+              icon: const Icon(Icons.refresh, color: Wm.accent),
             ),
           ],
         ),
@@ -4218,8 +4513,8 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE8EDEF)),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: Wm.border),
                 ),
                 child: Row(
                   children: [
@@ -4228,18 +4523,18 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                             radius: 22,
                             backgroundImage: NetworkImage(photoUrl),
                             onBackgroundImageError: (_, _) {},
-                            backgroundColor: const Color(0xFFE0F7FA),
+                            backgroundColor: const Color(0xFFFDF0E7),
                           )
                         : Container(
                             width: 44,
                             height: 44,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFE0F7FA),
+                              color: const Color(0xFFFDF0E7),
                               borderRadius: BorderRadius.circular(22),
                             ),
                             child: const Icon(
                               Icons.drive_eta,
-                              color: Color(0xFF006994),
+                              color: Color(0xFFC2571F),
                               size: 22,
                             ),
                           ),
@@ -4253,21 +4548,21 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                             style: const TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
-                              color: Color(0xFF006994),
+                              color: Color(0xFFC2571F),
                             ),
                           ),
                           Text(
                             email,
                             style: const TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF8B99A6),
+                              color: Wm.muted,
                             ),
                           ),
                           Text(
                             '$vehicle · $plate · $phone',
                             style: const TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF8B99A6),
+                              color: Wm.muted,
                             ),
                           ),
                         ],
@@ -4284,7 +4579,7 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                                     ? const Color(0xFF50C878)
                                     : const Color(0xFFFF6B4A))
                                 .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(18),
                       ),
                       child: Text(
                         avail ? 'Available' : 'Busy',
@@ -4302,7 +4597,7 @@ class _ManageDriversTabState extends State<_ManageDriversTab> {
                       onPressed: () => _editDriver(d),
                       icon: const Icon(
                         Icons.edit_outlined,
-                        color: Color(0xFF0EA5E9),
+                        color: Color(0xFFD96A2B),
                         size: 20,
                       ),
                       tooltip: 'Edit driver',
@@ -4336,11 +4631,11 @@ class _AdminEmpty extends StatelessWidget {
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFB),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE8EDEF)),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Wm.border),
       ),
       child: Center(
-        child: Text(message, style: const TextStyle(color: Color(0xFF8B99A6))),
+        child: Text(message, style: const TextStyle(color: Wm.muted)),
       ),
     );
   }

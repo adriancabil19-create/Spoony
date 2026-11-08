@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import '../widgets/safe_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../screens/home_screen.dart';
@@ -10,7 +11,7 @@ import '../screens/driver_screen.dart';
 import '../recovery_flag.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
-  static const routeName = '/';
+  static const routeName = '/login';
   const AuthScreen({super.key});
 
   @override
@@ -91,6 +92,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       }
     } catch (_) {}
     if (!mounted) return;
+    // Opened from a page (e.g. "Book now") — go back there signed in.
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context, true);
+      return;
+    }
     Navigator.pushReplacementNamed(context, HomeScreen.routeName);
   }
 
@@ -296,7 +302,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFF006994), Color(0xFF00BCD4)],
+                colors: [Color(0xFFC2571F), Color(0xFF3F7D58)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -305,8 +311,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           Positioned.fill(
             child: Opacity(
               opacity: 0.14,
-              child: Image.network(
-                'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+              child: SafeImage(
+                'https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1f/Malapascua_%28island%29%2C_Tropical_lagoon%2C_Pure_tropical_bliss%2C_Philippines.jpg/960px-Malapascua_%28island%29%2C_Tropical_lagoon%2C_Pure_tropical_bliss%2C_Philippines.jpg',
                 fit: BoxFit.cover,
                 errorBuilder: (_, _, _) => const SizedBox(),
               ),
@@ -346,6 +352,34 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ),
             ),
           ),
+          // Back to the home page (guests can browse without signing in).
+          if (!_isPasswordRecovery)
+            Positioned(
+              top: 0,
+              left: 0,
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: TextButton.icon(
+                    onPressed: () {
+                      if (Navigator.canPop(context)) {
+                        Navigator.pop(context);
+                      } else {
+                        Navigator.pushReplacementNamed(context, HomeScreen.routeName);
+                      }
+                    },
+                    icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    label: const Text('Back',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.15),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -731,7 +765,7 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
             decoration: const BoxDecoration(
-              gradient: LinearGradient(colors: [Color(0xFF0EA5E9), Color(0xFF14B8A6)]),
+              gradient: LinearGradient(colors: [Color(0xFFD96A2B), Color(0xFF3F7D58)]),
             ),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const Text('Reset Password',
@@ -782,7 +816,7 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: Color(0xFF0EA5E9), width: 2),
+                      borderSide: const BorderSide(color: Color(0xFFD96A2B), width: 2),
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
@@ -833,7 +867,7 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
                       }
                     },
                     style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF0EA5E9),
+                      backgroundColor: const Color(0xFFD96A2B),
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),

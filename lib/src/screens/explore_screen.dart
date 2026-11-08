@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
+import '../widgets/spot_card.dart';
+import '../widgets/wm_ui.dart';
+import '../auth_gate.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models.dart';
 import '../data/cebu_data.dart';
 import 'home_screen.dart';
-import 'booking_screen.dart';
 
-const _kOcean = Color(0xFF0EA5E9);
-const _kTeal  = Color(0xFF14B8A6);
-const _kGold  = Color(0xFFF59E0B);
-const _kDark  = Color(0xFF0F172A);
-const _kMid   = Color(0xFF64748B);
-const _kBg    = Color(0xFFF8FAFC);
+const _kBg = Color(0xFFF8FAFC);
 
 class ExploreScreen extends StatefulWidget {
   static const routeName = '/explore';
@@ -113,6 +110,9 @@ class _ExploreScreenState extends State<ExploreScreen> {
   }
 
   Future<void> _toggleFavorite(String spotName) async {
+    final signedIn = await requireLogin(context,
+        message: 'Sign in to save destinations to your favorites.');
+    if (!signedIn || !mounted) return;
     final updated = Set<String>.from(_favorites);
     if (updated.contains(spotName)) {
       updated.remove(spotName);
@@ -157,7 +157,12 @@ class _ExploreScreenState extends State<ExploreScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            SpoonyNavBar(current: 'explore'),
+            const SpoonyNavBar(
+              current: 'explore',
+              title: 'Explore',
+              subtitle: 'Cebu',
+              tagline: 'From pristine beaches to mountain peaks, discover the wonders of Cebu and its neighboring islands.',
+            ),
             LayoutBuilder(builder: (context, constraints) {
               final wide = constraints.maxWidth >= 700;
               final hPad = wide ? 80.0 : 20.0;
@@ -166,80 +171,64 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Explore Destinations',
-                        style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: _kDark)),
-                    const SizedBox(height: 8),
-                    const SizedBox(
-                      width: 520,
-                      child: Text(
-                        'From pristine beaches to mountain peaks, discover the wonders of Cebu and its neighboring islands.',
-                        style: TextStyle(color: _kMid, fontSize: 14, height: 1.6),
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                    // Search
-                    TextField(
-                      onChanged: (v) => setState(() => _searchQuery = v),
-                      decoration: InputDecoration(
-                        hintText: 'Search destinations…',
-                        hintStyle: const TextStyle(color: _kMid),
-                        prefixIcon: const Icon(Icons.search, color: _kOcean),
-                        filled: true,
-                        fillColor: Colors.white,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: _kOcean, width: 1.5),
+                    // Search (Watermelon pill input)
+                    WmBlurIn(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 640),
+                        child: TextField(
+                          onChanged: (v) => setState(() => _searchQuery = v),
+                          style: const TextStyle(fontSize: 14.5, color: Wm.ink),
+                          decoration: InputDecoration(
+                            hintText: 'Search destinations, beaches, falls…',
+                            hintStyle: const TextStyle(color: Wm.muted),
+                            prefixIcon: const Padding(
+                              padding: EdgeInsets.only(left: 14, right: 6),
+                              child: Icon(Icons.search_rounded, color: Wm.accent),
+                            ),
+                            filled: true,
+                            fillColor: Wm.surface,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(999),
+                              borderSide: const BorderSide(color: Wm.border),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(999),
+                              borderSide: const BorderSide(color: Wm.border),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(999),
+                              borderSide: BorderSide(color: Wm.accent.withValues(alpha: 0.7), width: 2),
+                            ),
+                          ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 20),
-                    // Region filter chips
-                    SizedBox(
-                      height: 44,
-                      child: ListView.separated(
+                    // Region filter: spring-sliding pill tabs
+                    WmBlurIn(
+                      delay: const Duration(milliseconds: 80),
+                      child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
-                        itemCount: _regions.length,
-                        separatorBuilder: (_, _) => const SizedBox(width: 10),
-                        itemBuilder: (context, i) {
-                          final region = _regions[i];
-                          final selected = region == _selectedRegion;
-                          final label = region == DestinationRegion.all ? 'All' : regionTitle(region);
-                          return FilterChip(
-                            label: Text(label),
-                            selected: selected,
-                            onSelected: (_) => setState(() => _selectedRegion = region),
-                            selectedColor: _kOcean,
-                            backgroundColor: Colors.white,
-                            side: BorderSide(
-                              color: selected ? _kOcean : const Color(0xFFE2E8F0),
-                              width: 1.5,
-                            ),
-                            labelStyle: TextStyle(
-                              color: selected ? Colors.white : _kMid,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            showCheckmark: false,
-                          );
-                        },
+                        child: WmContinuousTabs(
+                          labels: [
+                            for (final r in _regions) r == DestinationRegion.all ? 'All' : regionTitle(r),
+                          ],
+                          selected: _regions.indexOf(_selectedRegion),
+                          onChanged: (i) => setState(() => _selectedRegion = _regions[i]),
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    Text('${_filtered.length} destination${_filtered.length == 1 ? '' : 's'}',
+                        style: const TextStyle(color: Wm.muted, fontSize: 12.5)),
                     const SizedBox(height: 32),
                     _filtered.isEmpty
                         ? const Center(
                             child: Padding(
                               padding: EdgeInsets.all(48),
                               child: Text('No destinations found.',
-                                  style: TextStyle(color: _kMid, fontSize: 16)),
+                                  style: TextStyle(color: Wm.muted, fontSize: 16)),
                             ),
                           )
                         : LayoutBuilder(builder: (context, inner) {
@@ -252,13 +241,19 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                 crossAxisCount: cols,
                                 mainAxisSpacing: 20,
                                 crossAxisSpacing: 20,
-                                mainAxisExtent: cols == 1 ? 350 : 310,
+                                mainAxisExtent: cols == 1 ? 350 : 320,
                               ),
                               itemCount: _filtered.length,
-                              itemBuilder: (context, i) => _DestinationGridCard(
-                                spot: _filtered[i],
-                                isFavorited: _favorites.contains(_filtered[i].name),
-                                onToggleFavorite: () => _toggleFavorite(_filtered[i].name),
+                              itemBuilder: (context, i) => WmBlurIn(
+                                key: ValueKey('${_selectedRegion.name}-${_filtered[i].id}'),
+                                delay: Duration(milliseconds: 40 * (i < 12 ? i : 12)),
+                                child: SpotCard(
+                                  spot: _filtered[i],
+                                  imageHeight: cols == 1 ? 190 : 160,
+                                  saved: _favorites.contains(_filtered[i].name),
+                                  onToggleSave: () => _toggleFavorite(_filtered[i].name),
+                                  ctaLabel: 'Add to Itinerary',
+                                ),
                               ),
                             );
                           }),
@@ -269,162 +264,6 @@ class _ExploreScreenState extends State<ExploreScreen> {
             const SizedBox(height: 48),
             const SpoonyFooter(),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DestinationGridCard extends StatefulWidget {
-  final Destination spot;
-  final bool isFavorited;
-  final VoidCallback onToggleFavorite;
-  const _DestinationGridCard({
-    required this.spot,
-    required this.isFavorited,
-    required this.onToggleFavorite,
-  });
-
-  @override
-  State<_DestinationGridCard> createState() => _DestinationGridCardState();
-}
-
-class _DestinationGridCardState extends State<_DestinationGridCard> {
-  bool _hovered = false;
-
-  Color _regionColor(DestinationRegion r) {
-    switch (r) {
-      case DestinationRegion.cebuCity:  return _kOcean;
-      case DestinationRegion.southCebu: return _kTeal;
-      case DestinationRegion.northCebu: return const Color(0xFF8B5CF6);
-      case DestinationRegion.bohol:     return _kGold;
-      default:                          return _kMid;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final spot = widget.spot;
-
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: () => Navigator.pushNamed(context, BookingScreen.routeName),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          transform: Matrix4.translationValues(0, _hovered ? -6 : 0, 0),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: _hovered ? 0.12 : 0.06),
-                blurRadius: _hovered ? 24 : 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: Stack(
-                  children: [
-                    Image.network(
-                      spot.images.first,
-                      height: 160,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => Container(
-                        height: 160,
-                        color: const Color(0xFFE0F7FA),
-                        child: const Icon(Icons.image, color: _kOcean, size: 40),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8, right: 8,
-                      child: GestureDetector(
-                        onTap: widget.onToggleFavorite,
-                        child: Container(
-                          width: 32, height: 32,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.25),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            widget.isFavorited ? Icons.favorite : Icons.favorite_border,
-                            color: widget.isFavorited ? const Color(0xFFFF6B4A) : Colors.white,
-                            size: 16,
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8, left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _regionColor(spot.region),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Text(
-                          regionTitle(spot.region).split(' ').first,
-                          style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(spot.name,
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: _kDark),
-                      maxLines: 2, overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 4),
-                  Row(children: [
-                    const Icon(Icons.location_on, size: 12, color: _kMid),
-                    const SizedBox(width: 3),
-                    Expanded(
-                      child: Text(regionTitle(spot.region),
-                          style: const TextStyle(fontSize: 11, color: _kMid),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                  ]),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(children: [
-                        const Icon(Icons.star, size: 13, color: _kGold),
-                        const SizedBox(width: 3),
-                        Text('${spot.rating}',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kDark)),
-                      ]),
-                      Text('₱${spot.entranceFee.toInt()}',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _kTeal)),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () => Navigator.pushNamed(context, BookingScreen.routeName),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: _kOcean,
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      child: const Text('Add to Itinerary', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                ]),
-              ),
-            ],
-          ),
         ),
       ),
     );
